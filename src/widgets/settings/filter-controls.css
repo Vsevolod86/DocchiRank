@@ -1,0 +1,74 @@
+.filter-option {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    min-width: 0;
+    min-height: 2rem;
+    padding: .35rem;
+    border: 0;
+    border-radius: 5px;
+    text-align: left;
+    font-size: .8rem;
+    color: var(--text-secondary);
+    background: transparent;
+}
+
+.filter-option>span:last-child {
+    overflow-wrap: anywhere;
+}
+
+.filter-option:hover:not(:disabled) {
+    background: var(--surface-hover);
+}
+
+.filter-option.binary {
+    cursor: pointer;
+}
+
+.filter-option.binary input {
+    flex: 0 0 1.2rem;
+    width: 1.2rem;
+    height: 1.2rem;
+    margin: 0;
+    accent-color: var(--accent-fill);
+    cursor: pointer;
+}
+
+.filter-option.disabled {
+    opacity: .5;
+    cursor: not-allowed;
+}
+
+.filter-option.disabled:hover {
+    background: transparent;
+}
+
+.filter-flag {
+    display: grid;
+    flex: 0 0 1.2rem;
+    width: 1.2rem;
+    height: 1.2rem;
+    place-items: center;
+    border: 1px solid var(--control-line);
+    border-radius: 4px;
+    font-size: .9rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.filter-flag svg {
+    width: 1rem;
+    height: 1rem;
+}
+
+.filter-option.ternary.include .filter-flag {
+    color: var(--on-accent);
+    background: var(--accent-fill);
+    border-color: var(--accent-fill);
+}
+
+.filter-option.ternary.exclude .filter-flag {
+    color: var(--on-accent);
+    background: #c34b5d;
+    border-color: #c34b5d;
+}

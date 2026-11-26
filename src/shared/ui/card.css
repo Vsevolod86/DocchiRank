@@ -1,0 +1,26 @@
+.card {
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    background: var(--surface);
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+.card .card-title {
+    -webkit-user-select: text;
+    user-select: text;
+    cursor: text;
+}
+
+.panel {
+    padding: var(--space-xl);
+}
+
+.panel p {
+    color: var(--muted);
+}
+
+.panel h2 {
+    font-size: 1.4rem;
+    margin-bottom: .65rem;
+}

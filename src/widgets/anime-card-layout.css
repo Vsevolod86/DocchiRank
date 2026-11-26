@@ -1,0 +1,227 @@
+.anime-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1.25rem;
+}
+
+.selection-content .anime-grid.large {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 14rem), 1fr));
+}
+
+.large .anime-choice {
+    position: relative;
+    isolation: isolate;
+    aspect-ratio: 2 / 3;
+    min-height: calc(22rem / var(--anime-card-size-divisor, 1));
+}
+
+.large .cover-wrap {
+    position: absolute;
+    inset: 0;
+    height: 100%;
+}
+
+.large .cover-wrap input {
+    top: auto;
+    right: 1rem;
+    bottom: 1rem;
+    z-index: 3;
+    width: 1.375rem;
+    height: 1.375rem;
+    margin: 0;
+}
+
+.large .choice-description {
+    position: absolute;
+    inset: 66% 0 0;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 1rem;
+    background: var(--surface);
+    opacity: .95;
+    pointer-events: none;
+    transition: opacity .2s;
+}
+
+.large .choice-titles .card-title {
+    pointer-events: auto;
+}
+
+.large .choice-titles {
+    flex: 1;
+    line-height: 1.35;
+}
+
+.large .choice-titles:has(h2) {
+    min-block-size: 1lh;
+}
+
+.large .choice-description h2 {
+    min-height: 0;
+    line-height: inherit;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+    text-overflow: ellipsis;
+}
+
+.large .original-title {
+    min-height: 0;
+    max-block-size: 2lh;
+    margin-bottom: .75rem;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+}
+
+.large .card-meta {
+    flex-shrink: 0;
+    margin-top: auto;
+    padding-right: 2.75rem;
+    min-height: 1.375rem;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-start;
+    gap: .15rem .6rem;
+    font-size: .8rem;
+}
+
+.large .source-score {
+    white-space: nowrap;
+}
+
+@media (hover: hover) {
+    .large .anime-choice:hover:not(:has(.card-title:hover, .card-link:hover)) .choice-description {
+        opacity: 0;
+    }
+}
+
+.anime-grid.compact {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 17.5rem), 1fr));
+    gap: .75rem;
+}
+
+.compact .anime-choice {
+    display: grid;
+    grid-template-columns: 3.5rem minmax(0, 1fr) 1.375rem;
+    grid-template-rows: minmax(0, 1fr) auto;
+    align-items: start;
+    height: calc(5.25rem + 1.3rem + 4px);
+    gap: .4rem .65rem;
+    padding: .65rem;
+}
+
+.compact .cover-wrap {
+    display: contents;
+}
+
+.compact .cover-wrap img,
+.compact .cover-wrap .cover-placeholder {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+    width: 3.5rem;
+    height: 5.25rem;
+    min-height: 0;
+    object-fit: cover;
+    border-radius: 6px;
+}
+
+.compact .cover-wrap input {
+    position: static;
+    grid-column: 3;
+    grid-row: 2;
+    width: 1.375rem;
+    height: 1.375rem;
+    margin: 0;
+    align-self: center;
+}
+
+.compact .choice-description {
+    display: contents;
+}
+
+.compact .choice-description h2 {
+    grid-column: 2 / -1;
+    grid-row: 1;
+    min-width: 0;
+    min-height: 0;
+    max-height: 2.7em;
+    margin: 0;
+    font-size: .9rem;
+    line-height: 1.35;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+    text-overflow: ellipsis;
+}
+
+.compact .card-meta {
+    grid-column: 2;
+    grid-row: 2;
+    min-width: 0;
+    min-height: 1.375rem;
+    flex-wrap: wrap;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: .15rem .6rem;
+}
+
+.compact .source-score {
+    white-space: nowrap;
+}
+
+.compact .anime-choice {
+    height: auto;
+    min-height: calc(5.25rem + 1.3rem + 4px);
+}
+
+.compact .choice-titles {
+    grid-column: 2 / -1;
+    grid-row: 1;
+    align-self: stretch;
+    max-width: 100%;
+}
+
+.compact .choice-titles h2 {
+    margin: 0;
+}
+
+.choice-titles.is-single-line h2 {
+    -webkit-line-clamp: 1;
+}
+
+.compact .choice-titles .original-title {
+    min-height: 0;
+    margin: .15rem 0 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: .75rem;
+    line-height: 1.25;
+}
+
+.choice-titles .original-title.is-clipped {
+    visibility: hidden;
+}
+
+.compact .card-meta {
+    font-size: .75rem;
+}
+
+@media (max-width: 1100px) {
+    .anime-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 700px) {
+    .anime-grid {
+        gap: .7rem;
+    }
+}

@@ -1,0 +1,46 @@
+.input-field {
+    width: 100%;
+}
+
+.input-field--outlined {
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: .8rem;
+    font-size: 1rem;
+}
+
+.input-field--outlined::placeholder {
+    color: var(--muted);
+}
+
+.input-field--outlined[type="file"] {
+    padding: .65rem;
+    font-size: .85rem;
+}
+
+.input-field--compact {
+    min-width: 0;
+    padding: .4rem 0;
+    font-size: .75rem;
+}
+
+.input-field::file-selector-button {
+    padding: .45rem;
+    margin-right: var(--space-sm);
+    color: var(--accent);
+    cursor: pointer;
+}
+
+.input-field--outlined::file-selector-button {
+    border: 0;
+    border-radius: 4px;
+    background: var(--accent-surface);
+}
+
+.input-field--compact::file-selector-button {
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    background: var(--surface);
+}

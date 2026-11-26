@@ -1,0 +1,933 @@
+{
+  "seeds": [
+    3,
+    17,
+    81
+  ],
+  "node": "v24.22.3",
+  "gallopThreshold": 3,
+  "rows": [
+    {
+      "size": 32,
+      "knownSize": 0,
+      "mode": "exact",
+      "strategy": "merge",
+      "means": {
+        "insertion": 31,
+        "merge": 31,
+        "auto": 31,
+        "binary": 103,
+        "ordinaryMerge": 80
+      },
+      "samples": [
+        {
+          "insertion": 31,
+          "merge": 31,
+          "auto": 31,
+          "binary": 103,
+          "ordinaryMerge": 80
+        },
+        {
+          "insertion": 31,
+          "merge": 31,
+          "auto": 31,
+          "binary": 103,
+          "ordinaryMerge": 80
+        },
+        {
+          "insertion": 31,
+          "merge": 31,
+          "auto": 31,
+          "binary": 103,
+          "ordinaryMerge": 80
+        }
+      ]
+    },
+    {
+      "size": 32,
+      "knownSize": 0,
+      "mode": "blocks",
+      "strategy": "merge",
+      "means": {
+        "insertion": 53.67,
+        "merge": 53.67,
+        "auto": 53.67,
+        "binary": 112.33,
+        "ordinaryMerge": 88
+      },
+      "samples": [
+        {
+          "insertion": 58,
+          "merge": 54,
+          "auto": 54,
+          "binary": 114,
+          "ordinaryMerge": 88
+        },
+        {
+          "insertion": 46,
+          "merge": 46,
+          "auto": 46,
+          "binary": 109,
+          "ordinaryMerge": 88
+        },
+        {
+          "insertion": 57,
+          "merge": 61,
+          "auto": 61,
+          "binary": 114,
+          "ordinaryMerge": 88
+        }
+      ]
+    },
+    {
+      "size": 32,
+      "knownSize": 0,
+      "mode": "random",
+      "strategy": "merge",
+      "means": {
+        "insertion": 176.33,
+        "merge": 130.33,
+        "auto": 130.33,
+        "binary": 121,
+        "ordinaryMerge": 124.33
+      },
+      "samples": [
+        {
+          "insertion": 169,
+          "merge": 130,
+          "auto": 130,
+          "binary": 118,
+          "ordinaryMerge": 125
+        },
+        {
+          "insertion": 171,
+          "merge": 130,
+          "auto": 130,
+          "binary": 123,
+          "ordinaryMerge": 123
+        },
+        {
+          "insertion": 189,
+          "merge": 131,
+          "auto": 131,
+          "binary": 122,
+          "ordinaryMerge": 125
+        }
+      ]
+    },
+    {
+      "size": 32,
+      "knownSize": 0,
+      "mode": "zigzag",
+      "strategy": "merge",
+      "means": {
+        "insertion": 61,
+        "merge": 101,
+        "auto": 101,
+        "binary": 118,
+        "ordinaryMerge": 112
+      },
+      "samples": [
+        {
+          "insertion": 61,
+          "merge": 101,
+          "auto": 101,
+          "binary": 118,
+          "ordinaryMerge": 112
+        },
+        {
+          "insertion": 61,
+          "merge": 101,
+          "auto": 101,
+          "binary": 118,
+          "ordinaryMerge": 112
+        },
+        {
+          "insertion": 61,
+          "merge": 101,
+          "auto": 101,
+          "binary": 118,
+          "ordinaryMerge": 112
+        }
+      ]
+    },
+    {
+      "size": 32,
+      "knownSize": 16,
+      "mode": "exact",
+      "strategy": "insertion",
+      "means": {
+        "insertion": 45,
+        "merge": 44.67,
+        "auto": 45,
+        "binary": 72.33,
+        "ordinaryMerge": 102.67
+      },
+      "samples": [
+        {
+          "insertion": 45,
+          "merge": 45,
+          "auto": 45,
+          "binary": 73,
+          "ordinaryMerge": 97
+        },
+        {
+          "insertion": 46,
+          "merge": 46,
+          "auto": 46,
+          "binary": 72,
+          "ordinaryMerge": 101
+        },
+        {
+          "insertion": 44,
+          "merge": 43,
+          "auto": 44,
+          "binary": 72,
+          "ordinaryMerge": 110
+        }
+      ]
+    },
+    {
+      "size": 32,
+      "knownSize": 16,
+      "mode": "blocks",
+      "strategy": "insertion",
+      "means": {
+        "insertion": 61.67,
+        "merge": 62.33,
+        "auto": 61.67,
+        "binary": 72.67,
+        "ordinaryMerge": 104
+      },
+      "samples": [
+        {
+          "insertion": 65,
+          "merge": 68,
+          "auto": 65,
+          "binary": 74,
+          "ordinaryMerge": 125
+        },
+        {
+          "insertion": 58,
+          "merge": 58,
+          "auto": 58,
+          "binary": 73,
+          "ordinaryMerge": 90
+        },
+        {
+          "insertion": 62,
+          "merge": 61,
+          "auto": 62,
+          "binary": 71,
+          "ordinaryMerge": 97
+        }
+      ]
+    },
+    {
+      "size": 32,
+      "knownSize": 16,
+      "mode": "random",
+      "strategy": "insertion",
+      "means": {
+        "insertion": 107,
+        "merge": 95.33,
+        "auto": 107,
+        "binary": 74,
+        "ordinaryMerge": 117.67
+      },
+      "samples": [
+        {
+          "insertion": 102,
+          "merge": 92,
+          "auto": 102,
+          "binary": 75,
+          "ordinaryMerge": 110
+        },
+        {
+          "insertion": 115,
+          "merge": 101,
+          "auto": 115,
+          "binary": 72,
+          "ordinaryMerge": 116
+        },
+        {
+          "insertion": 104,
+          "merge": 93,
+          "auto": 104,
+          "binary": 75,
+          "ordinaryMerge": 127
+        }
+      ]
+    },
+    {
+      "size": 32,
+      "knownSize": 16,
+      "mode": "zigzag",
+      "strategy": "insertion",
+      "means": {
+        "insertion": 75.67,
+        "merge": 71.67,
+        "auto": 75.67,
+        "binary": 75,
+        "ordinaryMerge": 106
+      },
+      "samples": [
+        {
+          "insertion": 79,
+          "merge": 80,
+          "auto": 79,
+          "binary": 75,
+          "ordinaryMerge": 105
+        },
+        {
+          "insertion": 82,
+          "merge": 70,
+          "auto": 82,
+          "binary": 75,
+          "ordinaryMerge": 98
+        },
+        {
+          "insertion": 66,
+          "merge": 65,
+          "auto": 66,
+          "binary": 75,
+          "ordinaryMerge": 115
+        }
+      ]
+    },
+    {
+      "size": 32,
+      "knownSize": 28,
+      "mode": "exact",
+      "strategy": "insertion",
+      "means": {
+        "insertion": 25.33,
+        "merge": 29.33,
+        "auto": 25.33,
+        "binary": 19.67,
+        "ordinaryMerge": 58
+      },
+      "samples": [
+        {
+          "insertion": 25,
+          "merge": 28,
+          "auto": 25,
+          "binary": 20,
+          "ordinaryMerge": 44
+        },
+        {
+          "insertion": 24,
+          "merge": 28,
+          "auto": 24,
+          "binary": 19,
+          "ordinaryMerge": 60
+        },
+        {
+          "insertion": 27,
+          "merge": 32,
+          "auto": 27,
+          "binary": 20,
+          "ordinaryMerge": 70
+        }
+      ]
+    },
+    {
+      "size": 32,
+      "knownSize": 28,
+      "mode": "blocks",
+      "strategy": "insertion",
+      "means": {
+        "insertion": 31.67,
+        "merge": 34.33,
+        "auto": 31.67,
+        "binary": 19.67,
+        "ordinaryMerge": 57.67
+      },
+      "samples": [
+        {
+          "insertion": 34,
+          "merge": 31,
+          "auto": 34,
+          "binary": 20,
+          "ordinaryMerge": 47
+        },
+        {
+          "insertion": 30,
+          "merge": 37,
+          "auto": 30,
+          "binary": 19,
+          "ordinaryMerge": 59
+        },
+        {
+          "insertion": 31,
+          "merge": 35,
+          "auto": 31,
+          "binary": 20,
+          "ordinaryMerge": 67
+        }
+      ]
+    },
+    {
+      "size": 32,
+      "knownSize": 28,
+      "mode": "random",
+      "strategy": "insertion",
+      "means": {
+        "insertion": 34,
+        "merge": 35.67,
+        "auto": 34,
+        "binary": 19.67,
+        "ordinaryMerge": 61.33
+      },
+      "samples": [
+        {
+          "insertion": 33,
+          "merge": 32,
+          "auto": 33,
+          "binary": 20,
+          "ordinaryMerge": 48
+        },
+        {
+          "insertion": 32,
+          "merge": 38,
+          "auto": 32,
+          "binary": 19,
+          "ordinaryMerge": 59
+        },
+        {
+          "insertion": 37,
+          "merge": 37,
+          "auto": 37,
+          "binary": 20,
+          "ordinaryMerge": 77
+        }
+      ]
+    },
+    {
+      "size": 32,
+      "knownSize": 28,
+      "mode": "zigzag",
+      "strategy": "insertion",
+      "means": {
+        "insertion": 29,
+        "merge": 30,
+        "auto": 29,
+        "binary": 20,
+        "ordinaryMerge": 59
+      },
+      "samples": [
+        {
+          "insertion": 30,
+          "merge": 31,
+          "auto": 30,
+          "binary": 20,
+          "ordinaryMerge": 43
+        },
+        {
+          "insertion": 25,
+          "merge": 29,
+          "auto": 25,
+          "binary": 20,
+          "ordinaryMerge": 59
+        },
+        {
+          "insertion": 32,
+          "merge": 30,
+          "auto": 32,
+          "binary": 20,
+          "ordinaryMerge": 75
+        }
+      ]
+    },
+    {
+      "size": 128,
+      "knownSize": 0,
+      "mode": "exact",
+      "strategy": "merge",
+      "means": {
+        "insertion": 127,
+        "merge": 127,
+        "auto": 127,
+        "binary": 649,
+        "ordinaryMerge": 448
+      },
+      "samples": [
+        {
+          "insertion": 127,
+          "merge": 127,
+          "auto": 127,
+          "binary": 649,
+          "ordinaryMerge": 448
+        },
+        {
+          "insertion": 127,
+          "merge": 127,
+          "auto": 127,
+          "binary": 649,
+          "ordinaryMerge": 448
+        },
+        {
+          "insertion": 127,
+          "merge": 127,
+          "auto": 127,
+          "binary": 649,
+          "ordinaryMerge": 448
+        }
+      ]
+    },
+    {
+      "size": 128,
+      "knownSize": 0,
+      "mode": "blocks",
+      "strategy": "merge",
+      "means": {
+        "insertion": 304,
+        "merge": 332,
+        "auto": 332,
+        "binary": 711.33,
+        "ordinaryMerge": 538.67
+      },
+      "samples": [
+        {
+          "insertion": 283,
+          "merge": 341,
+          "auto": 341,
+          "binary": 702,
+          "ordinaryMerge": 528
+        },
+        {
+          "insertion": 328,
+          "merge": 343,
+          "auto": 343,
+          "binary": 716,
+          "ordinaryMerge": 552
+        },
+        {
+          "insertion": 301,
+          "merge": 312,
+          "auto": 312,
+          "binary": 716,
+          "ordinaryMerge": 536
+        }
+      ]
+    },
+    {
+      "size": 128,
+      "knownSize": 0,
+      "mode": "random",
+      "strategy": "merge",
+      "means": {
+        "insertion": 1099.33,
+        "merge": 770,
+        "auto": 770,
+        "binary": 716.33,
+        "ordinaryMerge": 732.67
+      },
+      "samples": [
+        {
+          "insertion": 1120,
+          "merge": 772,
+          "auto": 772,
+          "binary": 720,
+          "ordinaryMerge": 741
+        },
+        {
+          "insertion": 1106,
+          "merge": 765,
+          "auto": 765,
+          "binary": 718,
+          "ordinaryMerge": 723
+        },
+        {
+          "insertion": 1072,
+          "merge": 773,
+          "auto": 773,
+          "binary": 711,
+          "ordinaryMerge": 734
+        }
+      ]
+    },
+    {
+      "size": 128,
+      "knownSize": 0,
+      "mode": "zigzag",
+      "strategy": "merge",
+      "means": {
+        "insertion": 253,
+        "merge": 461,
+        "auto": 461,
+        "binary": 712,
+        "ordinaryMerge": 640
+      },
+      "samples": [
+        {
+          "insertion": 253,
+          "merge": 461,
+          "auto": 461,
+          "binary": 712,
+          "ordinaryMerge": 640
+        },
+        {
+          "insertion": 253,
+          "merge": 461,
+          "auto": 461,
+          "binary": 712,
+          "ordinaryMerge": 640
+        },
+        {
+          "insertion": 253,
+          "merge": 461,
+          "auto": 461,
+          "binary": 712,
+          "ordinaryMerge": 640
+        }
+      ]
+    },
+    {
+      "size": 128,
+      "knownSize": 64,
+      "mode": "exact",
+      "strategy": "insertion",
+      "means": {
+        "insertion": 197.33,
+        "merge": 191.67,
+        "auto": 197.33,
+        "binary": 425.67,
+        "ordinaryMerge": 513.67
+      },
+      "samples": [
+        {
+          "insertion": 201,
+          "merge": 189,
+          "auto": 201,
+          "binary": 425,
+          "ordinaryMerge": 488
+        },
+        {
+          "insertion": 200,
+          "merge": 194,
+          "auto": 200,
+          "binary": 425,
+          "ordinaryMerge": 521
+        },
+        {
+          "insertion": 191,
+          "merge": 192,
+          "auto": 191,
+          "binary": 427,
+          "ordinaryMerge": 532
+        }
+      ]
+    },
+    {
+      "size": 128,
+      "knownSize": 64,
+      "mode": "blocks",
+      "strategy": "insertion",
+      "means": {
+        "insertion": 303.33,
+        "merge": 328.33,
+        "auto": 303.33,
+        "binary": 425.33,
+        "ordinaryMerge": 513.67
+      },
+      "samples": [
+        {
+          "insertion": 307,
+          "merge": 332,
+          "auto": 307,
+          "binary": 425,
+          "ordinaryMerge": 512
+        },
+        {
+          "insertion": 311,
+          "merge": 334,
+          "auto": 311,
+          "binary": 428,
+          "ordinaryMerge": 514
+        },
+        {
+          "insertion": 292,
+          "merge": 319,
+          "auto": 292,
+          "binary": 423,
+          "ordinaryMerge": 515
+        }
+      ]
+    },
+    {
+      "size": 128,
+      "knownSize": 64,
+      "mode": "random",
+      "strategy": "insertion",
+      "means": {
+        "insertion": 661.67,
+        "merge": 514.33,
+        "auto": 661.67,
+        "binary": 422,
+        "ordinaryMerge": 655.33
+      },
+      "samples": [
+        {
+          "insertion": 672,
+          "merge": 511,
+          "auto": 672,
+          "binary": 424,
+          "ordinaryMerge": 659
+        },
+        {
+          "insertion": 652,
+          "merge": 522,
+          "auto": 652,
+          "binary": 419,
+          "ordinaryMerge": 713
+        },
+        {
+          "insertion": 661,
+          "merge": 510,
+          "auto": 661,
+          "binary": 423,
+          "ordinaryMerge": 594
+        }
+      ]
+    },
+    {
+      "size": 128,
+      "knownSize": 64,
+      "mode": "zigzag",
+      "strategy": "insertion",
+      "means": {
+        "insertion": 527.33,
+        "merge": 354.33,
+        "auto": 527.33,
+        "binary": 423.67,
+        "ordinaryMerge": 650
+      },
+      "samples": [
+        {
+          "insertion": 567,
+          "merge": 345,
+          "auto": 567,
+          "binary": 426,
+          "ordinaryMerge": 688
+        },
+        {
+          "insertion": 488,
+          "merge": 360,
+          "auto": 488,
+          "binary": 422,
+          "ordinaryMerge": 592
+        },
+        {
+          "insertion": 527,
+          "merge": 358,
+          "auto": 527,
+          "binary": 423,
+          "ordinaryMerge": 670
+        }
+      ]
+    },
+    {
+      "size": 128,
+      "knownSize": 115,
+      "mode": "exact",
+      "strategy": "insertion",
+      "means": {
+        "insertion": 89,
+        "merge": 98.67,
+        "auto": 89,
+        "binary": 91,
+        "ordinaryMerge": 248
+      },
+      "samples": [
+        {
+          "insertion": 93,
+          "merge": 99,
+          "auto": 93,
+          "binary": 91,
+          "ordinaryMerge": 211
+        },
+        {
+          "insertion": 89,
+          "merge": 97,
+          "auto": 89,
+          "binary": 91,
+          "ordinaryMerge": 227
+        },
+        {
+          "insertion": 85,
+          "merge": 100,
+          "auto": 85,
+          "binary": 91,
+          "ordinaryMerge": 306
+        }
+      ]
+    },
+    {
+      "size": 128,
+      "knownSize": 115,
+      "mode": "blocks",
+      "strategy": "insertion",
+      "means": {
+        "insertion": 110.33,
+        "merge": 122,
+        "auto": 110.33,
+        "binary": 90.67,
+        "ordinaryMerge": 267.33
+      },
+      "samples": [
+        {
+          "insertion": 107,
+          "merge": 120,
+          "auto": 107,
+          "binary": 91,
+          "ordinaryMerge": 216
+        },
+        {
+          "insertion": 115,
+          "merge": 120,
+          "auto": 115,
+          "binary": 90,
+          "ordinaryMerge": 264
+        },
+        {
+          "insertion": 109,
+          "merge": 126,
+          "auto": 109,
+          "binary": 91,
+          "ordinaryMerge": 322
+        }
+      ]
+    },
+    {
+      "size": 128,
+      "knownSize": 115,
+      "mode": "random",
+      "strategy": "insertion",
+      "means": {
+        "insertion": 146.33,
+        "merge": 151,
+        "auto": 146.33,
+        "binary": 90,
+        "ordinaryMerge": 334.67
+      },
+      "samples": [
+        {
+          "insertion": 139,
+          "merge": 141,
+          "auto": 139,
+          "binary": 89,
+          "ordinaryMerge": 248
+        },
+        {
+          "insertion": 154,
+          "merge": 158,
+          "auto": 154,
+          "binary": 91,
+          "ordinaryMerge": 334
+        },
+        {
+          "insertion": 146,
+          "merge": 154,
+          "auto": 146,
+          "binary": 90,
+          "ordinaryMerge": 422
+        }
+      ]
+    },
+    {
+      "size": 128,
+      "knownSize": 115,
+      "mode": "zigzag",
+      "strategy": "insertion",
+      "means": {
+        "insertion": 111.33,
+        "merge": 120.67,
+        "auto": 111.33,
+        "binary": 89.67,
+        "ordinaryMerge": 360
+      },
+      "samples": [
+        {
+          "insertion": 129,
+          "merge": 120,
+          "auto": 129,
+          "binary": 89,
+          "ordinaryMerge": 332
+        },
+        {
+          "insertion": 100,
+          "merge": 120,
+          "auto": 100,
+          "binary": 90,
+          "ordinaryMerge": 291
+        },
+        {
+          "insertion": 105,
+          "merge": 122,
+          "auto": 105,
+          "binary": 90,
+          "ordinaryMerge": 457
+        }
+      ]
+    }
+  ],
+  "timings": [
+    {
+      "size": 500,
+      "knownSize": 0,
+      "strategy": "insertion",
+      "questions": 6100,
+      "sortMs": 4760.4,
+      "restoreMs": 1297.1,
+      "undoMs": 1234,
+      "copyMs": 17.19,
+      "storeSetMs": 52.79,
+      "storeSetMaxMs": 58.2,
+      "restoreAt30Ms": 10.77,
+      "bytes": 1081335
+    },
+    {
+      "size": 500,
+      "knownSize": 0,
+      "strategy": "merge",
+      "questions": 4019,
+      "sortMs": 1846.17,
+      "restoreMs": 661.78,
+      "undoMs": 623.83,
+      "copyMs": 11.75,
+      "storeSetMs": 38.09,
+      "storeSetMaxMs": 41.28,
+      "restoreAt30Ms": 10.12,
+      "bytes": 731578
+    },
+    {
+      "size": 500,
+      "knownSize": 490,
+      "strategy": "insertion",
+      "questions": 147,
+      "sortMs": 267.54,
+      "restoreMs": 55.03,
+      "undoMs": 48.85,
+      "copyMs": 3.93,
+      "storeSetMs": 13.76,
+      "storeSetMaxMs": 14.61,
+      "restoreAt30Ms": 20.86,
+      "bytes": 82904
+    },
+    {
+      "size": 500,
+      "knownSize": 490,
+      "strategy": "merge",
+      "questions": 161,
+      "sortMs": 306.88,
+      "restoreMs": 61.53,
+      "undoMs": 54.72,
+      "copyMs": 4.14,
+      "storeSetMs": 14.22,
+      "storeSetMaxMs": 15.95,
+      "restoreAt30Ms": 24.69,
+      "bytes": 85167
+    }
+  ]
+}

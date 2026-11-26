@@ -1,0 +1,118 @@
+.rating-editor .button {
+    min-height: 2.3rem;
+    padding: .5rem .65rem;
+    font-size: .8rem;
+}
+
+.rating-editor p { overflow-wrap: anywhere; }
+
+.rating-methods {
+    display: grid;
+    gap: .55rem;
+}
+
+.rating-editor label {
+    display: grid;
+    gap: .4rem;
+    min-width: 0;
+    color: var(--text-secondary);
+    font-size: .8rem;
+}
+
+.rating-editor select {
+    width: 100%;
+    min-width: 0;
+    min-height: 2.1rem;
+    padding: .35rem .5rem;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: var(--surface);
+    color: var(--text);
+    font: inherit;
+}
+
+.rating-editor .rating-center {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: .5rem;
+    margin: .4rem .2rem .15rem;
+}
+
+.rating-center select { width: 4.5rem; }
+
+.rating-distribution {
+    display: grid;
+    grid-template-columns: repeat(10, minmax(0, 1fr));
+    gap: .2rem;
+    margin: 1rem 0;
+    padding-top: 1rem;
+    border-top: 1px solid var(--line);
+}
+
+.rating-distribution-item {
+    display: grid;
+    grid-template-rows: 6rem .85rem;
+    gap: .3rem;
+    min-width: 0;
+    text-align: center;
+    font-size: .65rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--muted);
+}
+
+.rating-bar-track {
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    border-bottom: 1px solid var(--line);
+}
+
+.rating-bar {
+    position: relative;
+    width: 100%;
+    min-height: 2px;
+    overflow: hidden;
+    border-radius: 3px 3px 0 0;
+    background: linear-gradient(180deg, #8094ed, #3a59d9);
+}
+
+.rating-bar-count {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: var(--on-accent);
+    font-size: .65rem;
+    font-weight: 600;
+    line-height: 1.15;
+    white-space: nowrap;
+    text-shadow: 0 1px 1px rgb(25 41 99 / .3);
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.rating-distribution-item.is-empty .rating-bar { min-height: 0; }
+.rating-bar-label { font-weight: 600; color: var(--text-secondary); }
+
+.rating-conflict {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-md);
+}
+
+.rating-conflict > p {
+    flex: 1 1 14rem;
+    margin: 0;
+}
+
+.rating-placement-actions {
+    display: flex;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+    margin-inline-start: auto;
+}
+
+.rating-placement { margin-top: .65rem; }

@@ -1,0 +1,7 @@
+node_modules/
+dist/
+.vitest/
+coverage/
+*.local
+data/
+docs/plans

@@ -211,7 +211,7 @@ export function mountApp(root: HTMLElement, sources: ImportSources, store: Colle
     const target = event.target;
     if (!(target instanceof Element) || (!root.contains(target) && target !== root.ownerDocument.body)) return;
     if (target.closest('input, select, textarea') || (target instanceof HTMLElement && target.isContentEditable)) return;
-    if ((event.key === ' ' || event.key === 'Tab') && target.closest('.theme-toggle, .sidebar-handle')) return;
+    if (event.key === ' ' && target.closest('.theme-toggle, .sidebar-handle')) return;
 
     let shortcut = event.key === ' ' ? 'Space' : event.key;
     if (event.ctrlKey) {

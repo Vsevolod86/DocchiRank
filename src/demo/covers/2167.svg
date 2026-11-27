@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="360" viewBox="0 0 240 360">
+  <defs>
+    <linearGradient id="morning" x2="0" y2="1"><stop stop-color="#8a637c"/><stop offset=".53" stop-color="#dda7af"/><stop offset="1" stop-color="#f2c49e"/></linearGradient>
+    <g id="petal"><path d="M0 0q4-5 8-3-1 6-8 6z"/></g>
+  </defs>
+  <rect width="240" height="360" fill="url(#morning)"/>
+  <circle cx="152" cy="106" r="46" fill="#f3ce9f" opacity=".8"/>
+  <path d="M0 173q54-48 125-32 43 4 115-12v231H0z" fill="#a38496"/>
+  <path d="M0 204q49-7 107-39 64-36 133-12v207H0z" fill="#8a7288"/>
+  <path d="M58 360q7-73 61-121 44-40 32-65 24 25-15 75-42 51-26 111z" fill="#d9aa9f"/>
+  <path d="M117 176h71v-36h-71z" fill="#dac1a9"/>
+  <path d="m108 141 29-17h40l20 17z" fill="#69596e"/>
+  <path d="M157 125v-19l10-8 12 8v20z" fill="#c7acaa"/>
+  <path d="m153 107 14-12 15 12z" fill="#69596e"/>
+  <path d="M134 174v-18h9v18m17 0v-18h9v18" fill="#836778"/>
+  <path d="M123 150h9m14 0h9m16 0h10m-17-32h9" stroke="#fee0ae" stroke-width="3"/>
+  <path d="M0 234q23-25 59-28m112-9q38-16 69-18" fill="none" stroke="#b0949e" stroke-width="3"/>
+  <path d="M-7 220q40-68 28-133L8 13l17-7 20 68 26-38 11 6-29 57q7 63-28 128z" fill="#5c485d"/>
+  <path d="M26 88q50-24 89-62m-78 85q41 13 64 42" fill="none" stroke="#604a61" stroke-width="6" stroke-linecap="round"/>
+  <path d="M0 62q3-31 34-33 7-24 29-16 17-15 35 5 28-10 40 11l-18 28-36 8-51-4z" fill="#df9daa"/>
+  <path d="M0 19q22-22 43-13 21-13 37 2 25-8 37 11-17 26-56 22l-61 2z" fill="#eeb6bd"/>
+  <path d="M78 58q18-18 28-12 17-9 32 2 15-4 24 10-5 16-28 21l-44-2z" fill="#f3c2c2"/>
+  <g fill="#f9d4cc">
+    <use href="#petal" transform="translate(91 96) rotate(18)"/><use href="#petal" transform="translate(155 119) rotate(-16)"/>
+    <use href="#petal" transform="translate(194 68) rotate(40)"/><use href="#petal" transform="translate(74 156) rotate(10)"/>
+    <use href="#petal" transform="translate(208 171) rotate(-21)"/><use href="#petal" transform="translate(98 220) rotate(19)"/>
+  </g>
+</svg>

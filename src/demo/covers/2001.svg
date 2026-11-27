@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="360" viewBox="0 0 240 360">
+  <defs>
+    <path id="glasses" d="M510 354 954 563 1410 350 1072 725 951 648 824 725Z"/>
+    <clipPath id="lenses">
+      <use href="#glasses"/>
+    </clipPath>
+  </defs>
+
+  <rect width="240" height="360" fill="#030303"/>
+  <g transform="translate(-97.6 58) scale(.227)">
+    <use href="#glasses" fill="#da272d"/>
+    <g clip-path="url(#lenses)">
+      <g fill="#ffb1ae">
+        <path d="m562 540 148-144 56 17-155 155Z"/>
+        <path d="m748 727 241-241 68 27-224 226Z"/>
+        <path d="m1241 470 110-114 78-19-105 134Z"/>
+      </g>
+      <g fill="#ffe6dd" opacity=".85">
+        <path d="m606 544 119-125 9 4-118 126Z"/>
+        <path d="m903 586 8-8v117l-8 6Z"/>
+        <path d="m971 511 5-5v124l-5 5Z"/>
+        <path d="m1314 420 38-41 9-3-45 50Z"/>
+      </g>
+      <g fill="none" stroke="#fff0e7" stroke-width="4.5" stroke-linejoin="miter">
+        <path d="M775 731V557l69-52h32v55h-67v26h36v29h-37v116Z"/>
+        <path d="M879 501h33v230h-33Z"/>
+        <path d="M930 508h59v42h-18v-19h-19v65h35v135h-20V625h-15v106h-22Z"/>
+        <path d="M1009 501h17v90h16v-90h17v230h-17V615h-16v116h-17Z"/>
+        <path d="M1064 480h36v86h-7v165h-24V566h-5Z"/>
+
+        <path d="m533 379 13-12 17 9-13 12-8-4-19 20m31-17 11 16m-8-15 17-11 18 8-27 29-15-7Zm35-3-6 17 16-11-6 17 14-11"/>
+        <path d="m583 467 92-80 76 39-88 81Zm19-15 20 12 31-29-20-9m33-16 21 11-32 29-20-10"/>
+        <path d="m685 586 109-96 19 7-87 81m26-104-31 47 28-22 10 6-20 25 63-54m-87 117 114-96"/>
+        <g transform="translate(1104 488) rotate(-31)">
+          <path d="M0 0h54v30H37v137H18V30H0Z"/>
+          <path d="M65 0h17v48h16V0h17v157H98V78H82v79H65Z"/>
+          <path d="M128 0h47v27h-28v24h22v26h-22v26h29v25h-48Z"/>
+          <path d="M187 0h39v53h-22v53h-17Zm17 16v19h9V16Z"/>
+          <path d="M236 0h25v57h-25Zm8 12v34h8V12Z"/>
+        </g>
+      </g>
+    </g>
+    <use href="#glasses" fill="none" stroke="#ffd1c8" stroke-width="4" stroke-linejoin="round"/>
+  </g>
+</svg>

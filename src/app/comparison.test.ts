@@ -44,7 +44,7 @@ describe('сравнение реальной коллекции', () => {
     expect(pressKey('ArrowLeft')).toBe(true);
     const beforeSkip = session();
     expect(beforeSkip.history.at(-1)?.answer).toBe('left');
-    expect(pressKey('Tab')).toBe(true);
+    expect(pressKey(' ')).toBe(true);
     expect(session().history.at(-1)?.answer).toBe('skip');
 
     expect(pressKey('я', { code: 'KeyZ', ctrlKey: true })).toBe(true);
@@ -53,13 +53,14 @@ describe('сравнение реальной коллекции', () => {
 
     expect(pressKey('ArrowRight')).toBe(true);
     expect(session().history.at(-1)?.answer).toBe('right');
-    expect(pressKey(' ')).toBe(true);
+    expect(pressKey('ArrowDown')).toBe(true);
     expect(session().history.at(-1)?.answer).toBe('tie');
   });
 
-  it('оставляет навигацию с Shift+Tab и игнорирует повтор и клавиши вне сравнения', async () => {
+  it('сохраняет навигацию Tab и игнорирует повтор и клавиши вне сравнения', async () => {
     await importAndStart();
     const initial = store.get('shikimori:42')!.session;
+    expect(pressKey('Tab')).toBe(false);
     expect(pressKey('Tab', { shiftKey: true })).toBe(false);
     expect(pressKey('ArrowLeft', { repeat: true })).toBe(true);
     expect(store.get('shikimori:42')!.session).toEqual(initial);

@@ -16,3 +16,7 @@ pnpm dev --port 4173 --strictPort
 Открой [DocchiRank](http://127.0.0.1:4173/) и попробуй демонстрацию.
 
 [Как пользоваться](docs/usage.md) · [Разработка и публикация](docs/development.md)
+
+## Лицензия
+
+[MIT](LICENSE)

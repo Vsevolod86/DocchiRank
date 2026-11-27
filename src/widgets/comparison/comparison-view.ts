@@ -42,12 +42,12 @@ export function comparisonView(collection: Collection, state: ComparisonOptions)
     ${left && right ? `<div class="comparison-pair large">${comparisonCard(left, collection, state.displayFields, 'left', disabled || revision?.previousAnswer === 'left')}
       <div class="comparison-between">${renderButton({
         label: 'Одинаково', variant: 'secondary', disabled: disabled || revision?.previousAnswer === 'tie',
-        attributes: { 'data-action': 'answer', 'data-answer': 'tie', 'aria-keyshortcuts': 'Space' },
+        attributes: { 'data-action': 'answer', 'data-answer': 'tie', 'aria-keyshortcuts': 'ArrowDown' },
     })}
       ${revision ? '' : renderButton({
         label: 'Пропустить', variant: 'secondary', disabled: disabled || !view.canSkip,
         attributes: {
-            'data-action': 'answer', 'data-answer': 'skip', 'aria-keyshortcuts': 'Tab',
+            'data-action': 'answer', 'data-answer': 'skip', 'aria-keyshortcuts': 'Space',
             title: view.canSkip ? 'Показать другую неизвестную пару, сохранив оба тайтла в сравнении' : 'Другой неизвестной пары сейчас нет',
         },
     })}</div>
@@ -62,8 +62,8 @@ export function comparisonView(collection: Collection, state: ComparisonOptions)
 /** Показывает подсказку для текущей пары с учётом режима сравнения. */
 export function comparisonShortcuts({ sorting, comparisonRevision, comparisonConflict, loading }: ComparisonOptions): string {
     if (loading || comparisonConflict || !(comparisonRevision || sorting?.current)) return '';
-    return `<p><kbd>←</kbd> / <kbd>→</kbd> — выбрать карточку · <kbd>Пробел</kbd> — одинаково${comparisonRevision ? '' :
-        ' · <kbd>Tab</kbd> — пропустить пару · <kbd>Ctrl+Z</kbd> — отменить действие'}</p>`;
+    return `<p><kbd>←</kbd> / <kbd>→</kbd> — выбрать карточку · <kbd>↓</kbd> — одинаково${comparisonRevision ? '' :
+        ' · <kbd>Пробел</kbd> — пропустить пару · <kbd>Ctrl+Z</kbd> — отменить действие'}</p>`;
 }
 
 /** Добавляет действие предпочтения к обычной карточке произведения. */

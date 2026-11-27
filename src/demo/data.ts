@@ -1,15 +1,15 @@
 import type { ListEntry, SourceSnapshot } from '../entities/collection/model';
-import steinsGate from './covers/9253.jpg';
-import alchemist from './covers/5114.jpg';
-import yourName from './covers/32281.jpg';
-import spiritedAway from './covers/199.jpg';
-import attackOnTitan from './covers/16498.jpg';
-import haikyu from './covers/20583.jpg';
-import clannad from './covers/2167.jpg';
-import gurrenLagann from './covers/2001.jpg';
-import naruto from './covers/20.jpg';
+import steinsGate from './covers/9253.svg?no-inline';
+import alchemist from './covers/5114.svg?no-inline';
+import yourName from './covers/32281.svg?no-inline';
+import spiritedAway from './covers/199.svg?no-inline';
+import attackOnTitan from './covers/16498.svg?no-inline';
+import haikyu from './covers/20583.svg?no-inline';
+import clannad from './covers/2167.svg?no-inline';
+import gurrenLagann from './covers/2001.svg?no-inline';
+import naruto from './covers/20.svg?no-inline';
 
-// Метаданные и обложки из публичного каталога Shikimori, сохранённые для работы без сети.
+// Метаданные из Shikimori и локальные абстрактные иллюстрации для демонстрации без сети.
 const animes: SourceSnapshot['animes'] = [
   { id: "9253", name: "Steins;Gate", russian: "Врата Штейна", coverUrl: steinsGate, communityScore: 9.07, kind: "tv", url: "https://shikimori.io/animes/z9253-steins-gate" },
   { id: "5114", name: "Fullmetal Alchemist: Brotherhood", russian: "Стальной алхимик: Братство", coverUrl: alchemist, communityScore: 9.11, kind: "tv", url: "https://shikimori.io/animes/z5114-fullmetal-alchemist-brotherhood" },

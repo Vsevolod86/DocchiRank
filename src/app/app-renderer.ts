@@ -4,6 +4,7 @@ import { renderButton } from '../shared/ui/button';
 import { observeAnimeCardTitles } from '../widgets/anime-card-layout';
 import { ResultWidgets } from '../widgets/result/result-widgets';
 import type { AppView } from './app-view';
+import { SettingsDialog } from './settings-dialog';
 import { bindThemeToggle } from './theme';
 
 /** Владеет постоянной оболочкой и обновляет только участки с изменившейся разметкой. */
@@ -13,9 +14,7 @@ export class AppRenderer {
     private readonly content: HTMLElement;
     private readonly panel: HTMLElement;
     private readonly panelHandleZone: HTMLElement;
-    private readonly mobileSettings: HTMLButtonElement;
-    private readonly settingsDialog: HTMLDialogElement;
-    private readonly settingsTitle: HTMLElement;
+    private readonly settingsDialog: SettingsDialog;
     private readonly footer: HTMLElement;
     private readonly saveError: HTMLElement;
     private readonly exportButton: HTMLButtonElement;
@@ -81,21 +80,15 @@ export class AppRenderer {
         this.panel = root.ownerDocument.createElement('aside');
         this.panel.id = 'app-settings-panel';
         this.panelHandleZone = root.querySelector('.sidebar-handle-zone--settings')!;
-        this.mobileSettings = root.querySelector('.mobile-settings-toggle')!;
-        this.settingsDialog = root.querySelector('.settings-dialog')!;
-        this.settingsTitle = root.querySelector('#mobile-settings-heading')!;
-        this.settingsDialog.addEventListener('click', event => {
-            if (event.target === this.settingsDialog
-                || event.target instanceof Element && event.target.closest('[data-close-settings]')) this.settingsDialog.close();
-        });
-        this.settingsDialog.addEventListener('close', () => {
-            if (this.settingsDialog.open) return;
-            this.mobileSettings.setAttribute('aria-expanded', 'false');
-            if (this.panel.parentElement === this.settingsDialog) this.shell.append(this.panel);
-            if (this.previous?.screen === 'comparison' && this.root.ownerDocument.activeElement === this.mobileSettings) {
-                this.content.querySelector<HTMLElement>('h1')?.focus({ preventScroll: true });
-            }
-        });
+        this.settingsDialog = new SettingsDialog(
+            root.querySelector('.settings-dialog')!, root.querySelector('.mobile-settings-toggle')!,
+            this.panel, this.shell,
+            () => {
+                if (this.previous?.screen === 'comparison') {
+                    this.content.querySelector<HTMLElement>('h1')?.focus({ preventScroll: true });
+                }
+            },
+        );
         bindThemeToggle(root.querySelector('.theme-toggle')!);
         this.bindSidebarHandle(root.querySelector('.sidebar-handle--navigation')!, root.querySelector('.sidebar')!, 'navigation', 'меню');
         this.bindSidebarHandle(root.querySelector('.sidebar-handle--settings')!, this.panel, 'settings', 'боковую панель');
@@ -103,16 +96,13 @@ export class AppRenderer {
 
     /** Помещает текущую боковую панель в модальное окно, сохраняя её элементы. */
     showSettings(): void {
-        if (this.mobileSettings.hidden || this.settingsDialog.open) return;
-        this.settingsDialog.append(this.panel);
-        this.settingsDialog.showModal();
-        this.mobileSettings.setAttribute('aria-expanded', 'true');
+        this.settingsDialog.show();
     }
 
-    /** Сверяет подготовленные участки, сохраняя раскрытую историю и прокрутку той же панели. */
+    /** Сверяет подготовленные участки, сохраняя состояние истории и положение прокрутки. */
     render(view: AppView, focusHeading: boolean): void {
         const previous = this.previous;
-        if (this.settingsDialog.open && (!view.panel || previous?.screen !== view.screen || focusHeading)) this.settingsDialog.close();
+        if (!view.panel || previous?.screen !== view.screen || focusHeading) this.settingsDialog.close();
         const active = this.root.ownerDocument.activeElement;
         const focused = active instanceof HTMLElement && this.root.contains(active) ? active : null;
         const panelScroll = this.panel.scrollTop;
@@ -125,8 +115,12 @@ export class AppRenderer {
         }
         const replaceContent = previous?.content !== view.content || this.contentChangedInPlace;
         if (replaceContent) {
+            const scenarios = sameCollection ? this.content.querySelector<HTMLElement>('.scenario-grid') : null;
+            const scenarioScrollLeft = scenarios?.scrollLeft;
+            const activeScenario = scenarios?.querySelector<HTMLInputElement>('.scenario-card.active input')?.value;
             this.animeCardTitles?.disconnect();
             this.content.innerHTML = view.content;
+            this.restoreScenarioScroll(scenarioScrollLeft, activeScenario);
             this.animeCardTitles = observeAnimeCardTitles(this.content);
         }
         for (const detail of view.details) {
@@ -161,6 +155,21 @@ export class AppRenderer {
         this.exportButton.hidden = !error || !this.previous?.offerExport;
     }
 
+    /** Сохраняет положение карусели или центрирует выбранный сценарий. */
+    private restoreScenarioScroll(previousOffset: number | undefined, previousScenario: string | undefined): void {
+        const carousel = this.content.querySelector<HTMLElement>('.scenario-grid');
+        if (!carousel || carousel.scrollWidth <= carousel.clientWidth) return;
+
+        const active = carousel.querySelector<HTMLElement>('.scenario-card.active');
+        const scenario = active?.querySelector('input')?.value;
+        if (previousOffset !== undefined && scenario === previousScenario) {
+            carousel.scrollLeft = previousOffset;
+        } else if (active) {
+            const card = active.getBoundingClientRect();
+            carousel.scrollLeft += card.left - carousel.getBoundingClientRect().left + (card.width - carousel.clientWidth) / 2;
+        }
+    }
+
     /** Обновляет подробности отдельно от остальной разметки страницы. */
     private updateDetail(detail: PageDetail): void {
         const slot = this.content.querySelector<HTMLElement>(`#${detail.id}`)!;
@@ -172,18 +181,16 @@ export class AppRenderer {
     private updatePanel(view: SidePanelView | null, sameCollection: boolean): void {
         this.shell.classList.toggle('has-filters', view !== null);
         this.panelHandleZone.hidden = view === null;
-        this.mobileSettings.hidden = view === null;
+        this.settingsDialog.setTitle(view?.label ?? null);
         if (!view) {
             this.panel.remove();
             this.panel.replaceChildren();
             this.sections.clear();
             return;
         }
-        const container = this.settingsDialog.open ? this.settingsDialog : this.shell;
-        if (this.panel.parentElement !== container) container.append(this.panel);
+        if (!this.panel.parentElement) this.shell.append(this.panel);
         this.panel.className = view.className;
         this.panel.setAttribute('aria-label', view.label);
-        this.settingsTitle.textContent = view.label;
         for (const [key, section] of this.sections) {
             if (!(key in view.sections)) {
                 section.element.remove();

@@ -95,7 +95,7 @@ function filterGroup(group: BinaryFilterGroup, label: string, options: [string, 
             'data-action': 'select-filter-group', 'data-filter-group': group, 'aria-label': `${actionLabel}: ${label}`,
             title: allActive ? 'Выключить все флаги группы' : 'Включить все флаги группы',
         },
-      })}</div>
+    })}</div>
     <div id="panel-${group}-options" class="filter-options" ${state.collapsedGroups[group] ? 'hidden' : ''}>${options.map(([value, caption]) =>
         filterOption(group, value, caption, `${label}: ${caption}`, !active ? 'neutral' : conditions[value] ? 'include' : 'exclude', state.loading)).join('')}</div>
   </section>`;

@@ -2,14 +2,23 @@
   --side-panel-width: min(16.5rem, 22vw);
   --navigation-width: minmax(min-content, var(--side-panel-width));
   --side-panel-top: 2rem;
+  --side-panel-padding: 1.25rem;
   min-height: 100vh;
   display: grid;
   grid-template-columns: var(--navigation-width) minmax(0, 1fr);
 }
 .app-shell.has-filters { grid-template-columns: var(--navigation-width) minmax(0, 1fr) var(--settings-width, var(--side-panel-width)); }
-.sidebar { min-width: 0; overflow-y: auto; padding: var(--side-panel-top) 1.25rem 1.25rem; border-right: 1px solid var(--line); background: var(--surface); display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; }
-.filter-panel { grid-column: 3; grid-row: 1; position: sticky; top: 0; height: 100vh; overflow-y: auto; padding: var(--side-panel-top) 1.25rem 1.25rem; border-left: 1px solid var(--line); background: var(--surface); }
-.sidebar, .filter-panel { scrollbar-width: none; }
+.sidebar, .filter-panel {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+  padding: var(--side-panel-top) var(--side-panel-padding) 1.25rem;
+  background: var(--surface);
+  scrollbar-width: none;
+}
+.sidebar { display: flex; flex-direction: column; grid-area: 1 / 1; min-width: 0; border-right: 1px solid var(--line); }
+.filter-panel { grid-area: 1 / 3; border-left: 1px solid var(--line); }
 .sidebar::-webkit-scrollbar, .filter-panel::-webkit-scrollbar { display: none; }
 .sidebar-heading { display: flex; justify-content: space-between; align-items: center; gap: .4rem; margin: 0 .25rem var(--sidebar-heading-gap, 3rem); }
 .brand { display: inline-flex; align-items: center; gap: .7rem; font-size: 1.6rem; font-weight: 750; letter-spacing: -.06em; text-decoration: none; color: var(--text); white-space: nowrap; }
@@ -64,13 +73,13 @@
 .nav-step:hover:not(:disabled):not(.active) { background: var(--surface-hover); }
 .step-icon svg { width: 21px; height: 21px; }
 .sidebar-footer { margin-top: auto; border-top: 1px solid var(--line); padding: 1rem .75rem 0; color: var(--muted); font-size: .75rem; }
-.workspace { min-width: 0; display: flex; flex-direction: column; }
+.workspace { grid-area: 1 / 2; min-width: 0; display: flex; flex-direction: column; }
 main { width: 100%; max-width: 1200px; margin: 0 auto; padding: 2.5rem 3rem; flex: 1; }
 .page-footer { padding: 1.25rem 3rem; text-align: center; color: var(--muted); font-size: .875rem; }
 .page-footer:empty { display: none; }
 .page-footer p { margin: 0; }
 .sidebar-handle-zone { display: none; }
-@media (min-width: 901px) and (hover: hover) and (pointer: fine) {
+@media (width > 900px) and (hover: hover) and (pointer: fine) {
   .app-shell {
     --sidebar-heading-height: 2.25rem;
     --sidebar-heading-gap: 3rem;
@@ -78,7 +87,6 @@ main { width: 100%; max-width: 1200px; margin: 0 auto; padding: 2.5rem 3rem; fle
   }
   .sidebar-heading { min-height: var(--sidebar-heading-height); }
   .sidebar .nav-step[data-screen="import"] { min-height: var(--sidebar-import-height); line-height: 1.4; }
-  .workspace { grid-column: 2; grid-row: 1; }
   .app-shell.navigation-collapsed { --navigation-width: 0px; }
   .app-shell.settings-collapsed { --settings-width: 0px; }
   .navigation-collapsed > .sidebar, .settings-collapsed > .filter-panel { display: none; }
@@ -128,30 +136,34 @@ main { width: 100%; max-width: 1200px; margin: 0 auto; padding: 2.5rem 3rem; fle
   .sidebar-handle--navigation[aria-expanded="true"] svg,
   .sidebar-handle--settings[aria-expanded="false"] svg { transform: scaleX(-1); }
 }
-@media (max-width: 1000px) {
-  .app-shell { --side-panel-width: min(13.75rem, 22vw); } .sidebar { padding-left: .8rem; padding-right: .8rem; }
-  .filter-panel { padding-left: .8rem; padding-right: .8rem; }
-  main { padding: 2rem; } .page-footer { padding-left: 2rem; padding-right: 2rem; }
+@media (900px < width <= 1000px) {
+  .app-shell { --side-panel-padding: .8rem; }
+  main { padding: 2rem; }
+  .page-footer { padding-inline: 2rem; }
 }
 @media (max-width: 900px) {
-  .app-shell.has-filters { grid-template-columns: var(--navigation-width) minmax(0, 1fr); grid-template-rows: auto 1fr; }
-  .has-filters .sidebar { grid-column: 1; grid-row: 1 / span 2; }
-  .has-filters .workspace { grid-column: 2; grid-row: 2; }
-  .filter-panel { grid-column: 2; grid-row: 1; position: static; height: auto; padding: 1.25rem 2rem; border-left: 0; border-bottom: 1px solid var(--line); display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-content: start; gap: 0 1rem; }
-  .panel-settings, .comparison-panel-history, .selection-filter, .rating-editor { grid-column: 1 / -1; }
-  .filter-section-content { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 1rem; }
-}
-@media (max-width: 700px) {
-  .app-shell { display: block; } .sidebar { position: static; height: auto; padding: 1rem; border-right: 0; border-bottom: 1px solid var(--line); }
-  .brand { font-size: 1.4rem; } .sidebar-heading { margin: 0 0 1.25rem; } .sidebar nav { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .25rem; }
+  .app-shell { display: block; }
+  .app-shell > .filter-panel { display: none; }
+  .sidebar {
+    position: static;
+    height: auto;
+    padding: 1rem;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .brand { font-size: 1.4rem; }
+  .sidebar-heading { margin: 0 0 1.25rem; }
+  .sidebar-actions > .mobile-settings-toggle:not([hidden]) { display: inline-grid; }
+  .sidebar nav { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .25rem; }
   .nav-step small, .sidebar-footer { display: none; }
-  .nav-step { flex-direction: column; gap: .45rem; padding: .65rem .25rem; text-align: center; } .nav-step strong { font-size: .875rem; }
+  .nav-step {
+    flex-direction: column;
+    gap: .45rem;
+    padding: .65rem .25rem;
+    text-align: center;
+  }
+  .nav-step strong { font-size: .875rem; }
   main { padding: 1.75rem 1.25rem; }
   .page-footer { padding: 1rem 1.25rem; font-size: .8rem; }
-}
-@media (max-width: 700px), (max-width: 900px) and (hover: none) and (pointer: coarse) {
-  .app-shell > .filter-panel { display: none; }
-  .sidebar-actions > .mobile-settings-toggle:not([hidden]) { display: inline-grid; }
-  .settings-dialog .filter-section-content { grid-template-columns: minmax(0, 1fr); }
 }
 .screen-content, #backup-feedback, #result-table-section { display: contents; }

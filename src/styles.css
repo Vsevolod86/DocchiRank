@@ -4,20 +4,20 @@
 @import url('./shared/ui/input.css');
 @import url('./shared/ui/card.css');
 
-:root:has(#app [data-screen="selection"][aria-current="step"]) {
+:root:has(#app :is([data-screen="selection"], [data-screen="result"])[aria-current="step"]) {
     scrollbar-gutter: stable;
     background-color: var(--surface);
 }
 
-#app:has([data-screen="selection"][aria-current="step"]) {
+#app:has(:is([data-screen="selection"], [data-screen="result"])[aria-current="step"]) {
     background-color: var(--canvas);
 }
 
-:root:not(:has(#app [data-screen="selection"][aria-current="step"])) {
+:root:not(:has(#app :is([data-screen="selection"], [data-screen="result"])[aria-current="step"])) {
     scrollbar-width: none;
 }
 
-:root:not(:has(#app [data-screen="selection"][aria-current="step"]))::-webkit-scrollbar {
+:root:not(:has(#app :is([data-screen="selection"], [data-screen="result"])[aria-current="step"]))::-webkit-scrollbar {
     display: none;
 }
 
@@ -1077,6 +1077,7 @@ svg {
     --comparison-card-width: calc((100% - var(--comparison-controls-width) - 2 * var(--space-md)) / (2 * var(--anime-card-size-divisor)));
     display: grid;
     grid-template-columns: var(--comparison-card-width) var(--comparison-controls-width) var(--comparison-card-width);
+    grid-template-areas: 'left actions right';
     justify-content: center;
     align-items: center;
     gap: var(--space-md);
@@ -1087,6 +1088,14 @@ svg {
     display: block;
     width: 100%;
     text-align: left;
+}
+
+.comparison-pair > [data-comparison-left] {
+    grid-area: left;
+}
+
+.comparison-pair > [data-comparison-right] {
+    grid-area: right;
 }
 
 .comparison-choice-button {
@@ -1117,7 +1126,8 @@ svg {
     padding: var(--space-sm);
 }
 
-.comparison-between {
+.comparison-pair-actions {
+    grid-area: actions;
     display: flex;
     flex-direction: column;
     align-items: stretch;
@@ -1125,7 +1135,7 @@ svg {
     gap: .75rem;
 }
 
-.comparison-between .button {
+.comparison-pair-actions .button {
     padding: .6rem .3rem;
     font-size: .8rem;
 }
@@ -1145,14 +1155,21 @@ svg {
 
 .comparison-heading {
     display: flex;
+    flex-wrap: wrap;
     align-items: flex-start;
     justify-content: space-between;
-    gap: 1rem;
+    gap: .5rem 1rem;
     text-align: left;
 }
 
-.comparison-heading .button {
-    flex-shrink: 0;
+.comparison-heading > h1 {
+    flex: 1;
+    min-width: min(100%, 20rem);
+    margin-bottom: 0;
+}
+
+.comparison-heading > .lead {
+    flex-basis: 100%;
 }
 
 .comparison-tools {
@@ -1287,7 +1304,7 @@ svg {
     }
 }
 
-@media (max-width: 700px) {
+@media (max-width: 900px) {
     .intro {
         margin-top: .5rem;
     }
@@ -1341,32 +1358,44 @@ svg {
         flex-direction: column;
     }
 
-    .comparison-heading {
-        flex-direction: column;
+    .scenario-grid {
+        grid-template-columns: none;
+        grid-auto-flow: column;
+        grid-auto-columns: 100%;
+        padding-inline: 1.8rem;
+        overflow-x: auto;
+        overscroll-behavior-inline: contain;
+        scroll-snap-type: inline mandatory;
+        scrollbar-width: none;
     }
 
-    .comparison-heading .button {
-        align-self: flex-start;
+    .scenario-grid::-webkit-scrollbar {
+        display: none;
     }
-}
 
-@media (max-width: 560px) {
+    .scenario-card {
+        scroll-snap-align: center;
+        scroll-snap-stop: always;
+    }
+
+    .page-footer:has(> .comparison-shortcuts) {
+        display: none;
+    }
+
     .comparison-pair.large {
-        grid-template-columns: minmax(0, 1fr);
-        max-width: 20rem;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-areas:
+            'left right'
+            'actions actions';
+        align-items: stretch;
+        max-width: 28rem;
     }
 
-    .comparison-pair .comparison-choice {
-        width: calc(100% / var(--anime-card-size-divisor));
-        justify-self: center;
-    }
-
-    .comparison-between {
+    .comparison-pair-actions {
         flex-direction: row;
-        gap: .75rem;
     }
 
-    .comparison-between .button {
+    .comparison-pair-actions .button {
         flex: 1;
         padding: .7rem;
     }

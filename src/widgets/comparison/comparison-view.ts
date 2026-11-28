@@ -32,15 +32,20 @@ export function comparisonView(collection: Collection, state: ComparisonOptions)
         : complete ? 'Все тайтлы из сравнения размещены.'
             : 'Выбери карточку или поставь оба тайтла на одно место.';
     return `<section class="comparison-section">
-    <div class="comparison-heading"><div><h1 tabindex="-1">${heading}</h1><p class="lead">${lead}</p></div>
+    <div class="comparison-heading">
+      <h1 tabindex="-1">${heading}</h1>
       ${!revision && (complete || view.orderedGroups.length > 0) ? `<div class="comparison-tools">${renderButton({
         label: complete ? 'К результатам' : 'Посмотреть размещённые', variant: complete ? 'primary' : 'secondary',
         attributes: { 'data-screen': 'result' },
-    })}</div>` : ''}</div>
+    })}</div>` : ''}
+      <p class="lead">${lead}</p>
+    </div>
     ${revision ? '' : comparisonProgress(view)}
     ${comparisonFeedback(collection, state)}
-    ${left && right ? `<div class="comparison-pair large">${comparisonCard(left, collection, state.displayFields, 'left', disabled || revision?.previousAnswer === 'left')}
-      <div class="comparison-between">${renderButton({
+    ${left && right ? `<div class="comparison-pair large">
+      ${comparisonCard(left, collection, state.displayFields, 'left', disabled || revision?.previousAnswer === 'left')}
+      ${comparisonCard(right, collection, state.displayFields, 'right', disabled || revision?.previousAnswer === 'right')}
+      <div class="comparison-pair-actions">${renderButton({
         label: 'Одинаково', variant: 'secondary', disabled: disabled || revision?.previousAnswer === 'tie',
         attributes: { 'data-action': 'answer', 'data-answer': 'tie', 'aria-keyshortcuts': 'ArrowDown' },
     })}
@@ -51,7 +56,7 @@ export function comparisonView(collection: Collection, state: ComparisonOptions)
             title: view.canSkip ? 'Показать другую неизвестную пару, сохранив оба тайтла в сравнении' : 'Другой неизвестной пары сейчас нет',
         },
     })}</div>
-      ${comparisonCard(right, collection, state.displayFields, 'right', disabled || revision?.previousAnswer === 'right')}</div>` : ''}
+    </div>` : ''}
     ${revision ? (state.comparisonConflict ? '' : `<div class="comparison-actions comparison-bottom-actions">
         ${renderButton({ label: 'Отменить пересмотр', variant: 'secondary', attributes: { 'data-action': 'cancel-revision' } })}</div>`)
             : `<div class="comparison-actions comparison-bottom-actions">${undoComparisonButton(!view.canUndo || disabled, 'Control+Z')}
@@ -62,7 +67,7 @@ export function comparisonView(collection: Collection, state: ComparisonOptions)
 /** Показывает подсказку для текущей пары с учётом режима сравнения. */
 export function comparisonShortcuts({ sorting, comparisonRevision, comparisonConflict, loading }: ComparisonOptions): string {
     if (loading || comparisonConflict || !(comparisonRevision || sorting?.current)) return '';
-    return `<p><kbd>←</kbd> / <kbd>→</kbd> — выбрать карточку · <kbd>↓</kbd> — одинаково${comparisonRevision ? '' :
+    return `<p class="comparison-shortcuts"><kbd>←</kbd> / <kbd>→</kbd> — выбрать карточку · <kbd>↓</kbd> — одинаково${comparisonRevision ? '' :
         ' · <kbd>Пробел</kbd> — пропустить пару · <kbd>Ctrl+Z</kbd> — отменить действие'}</p>`;
 }
 

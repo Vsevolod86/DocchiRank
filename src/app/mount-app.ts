@@ -1,7 +1,9 @@
+import { COMPARISON_KEYS, SCREEN_DEFAULTS } from '../config/interface';
 import type { Collection } from '../entities/collection/model';
 import { listMedia } from '../entities/collection/model';
 import { CollectionBackups, exportBackup } from '../features/backup/collection-backups';
 import { CollectionCommands } from '../features/collection/collection-commands';
+import { GROUP_DISPLAYS } from '../features/collection/group-display';
 import { canExportShikimori, resultViewData } from '../features/collection/result-view-data';
 import { ListImport } from '../features/import-list/list-import';
 import type { ImportSources } from '../features/import-list/list-import';
@@ -29,15 +31,7 @@ import type { ScreenPreferences, ViewState } from './state';
 /** Соединяет экран и события DOM с командами коллекции и сценариями. */
 export function mountApp(root: HTMLElement, sources: ImportSources, store: CollectionStore,
   selections?: SelectionStore): void {
-  const state: ScreenPreferences = {
-    cardLayout: 'compact',
-    displayFields: { russianTitle: true, originalTitle: true, status: false, userScore: true, communityScore: true, shikimoriLink: true },
-    filters: createDisplayFilters(),
-    listSort: { key: 'alphabet', reversed: false },
-    collapsedGroups: { status: false, kind: true, score: true, sort: false, settings: true, display: true, filters: false, history: true, distribution: false },
-    selectionSettingsCollapsed: false,
-    scenario: 'new', importMode: 'profile',
-  };
+  const state: ScreenPreferences = { ...structuredClone(SCREEN_DEFAULTS), filters: createDisplayFilters() };
   const commands = new CollectionCommands();
   const navigation = new AppNavigation(commands);
   const keyboardScope: EventTarget = root.closest('dialog') ?? root.ownerDocument;
@@ -260,15 +254,17 @@ export function mountApp(root: HTMLElement, sources: ImportSources, store: Colle
     if (!(target instanceof Element) || (!root.contains(target) && target !== root.ownerDocument.body)) return;
     if (root.querySelector('.settings-dialog[open]') || target.closest('input:not([type="checkbox"]), select, textarea')
       || (target instanceof HTMLElement && target.isContentEditable)) return;
-    if (event.key === ' ' && target.closest('.sidebar-actions, .sidebar-handle, .filter-panel, input[type="checkbox"]')) return;
+    if ((event.key === ' ' || event.key === 'ArrowDown') && target.closest('.comparison-group-scroll')) return;
+    if (event.key === ' ' && target.closest('.sidebar-actions, .sidebar-handle, .filter-panel, input[type="checkbox"], .comparison-group button')) return;
 
     let shortcut = event.key === ' ' ? 'Space' : event.key;
     if (event.ctrlKey) {
-      if (event.code !== 'KeyZ' && event.key.toLowerCase() !== 'z') return;
-      shortcut = 'Control+Z';
+      const undo = COMPARISON_KEYS.undo;
+      shortcut = event.code === undo.code ? undo.key : `Control+${event.key.toUpperCase()}`;
+      if (shortcut !== undo.key) return;
     }
     const button = Array.from(root.querySelectorAll<HTMLButtonElement>('button[aria-keyshortcuts]:not(:disabled)'))
-      .find(button => button.getAttribute('aria-keyshortcuts') === shortcut);
+      .find(button => button.getAttribute('aria-keyshortcuts') === shortcut && !button.closest('[hidden]'));
     if (!button) return;
 
     event.preventDefault();
@@ -443,6 +439,13 @@ export function mountApp(root: HTMLElement, sources: ImportSources, store: Colle
       render();
       if (enableResultLinks) highlightResultLinks(root);
       root.querySelector<HTMLInputElement>(`[name="display-field"][value="${field}"]`)?.focus({ preventScroll: true });
+      return;
+    }
+    if (input.name === 'comparison-group-display' && input.checked) {
+      const option = GROUP_DISPLAYS.find(item => item.key === input.value);
+      if (!option) return;
+      state.groupDisplay = option.key;
+      render();
       return;
     }
     if (input.name === 'comparison-scenario') {

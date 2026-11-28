@@ -6,12 +6,14 @@ import type { ImportMethod, ImportStatus } from '../features/import-list/list-im
 import type { DisplayFilters } from '../features/selection/filters';
 import type { ListSort } from '../features/selection/list-order';
 import type { ComparisonScenario } from '../features/collection/comparison-scenarios';
+import type { GroupDisplay } from '../features/collection/group-display';
 import type { PanelGroup } from '../widgets/panel-group-toggle';
 
 /** Настройки отображения, которыми владеет оболочка приложения. */
 export interface ScreenPreferences {
   cardLayout: 'compact' | 'large' | 'list';
   displayFields: AnimeDisplayFields;
+  groupDisplay: GroupDisplay;
   filters: DisplayFilters;
   listSort: ListSort;
   collapsedGroups: Record<PanelGroup, boolean>;

@@ -61,8 +61,9 @@ function preparePage(screen: Screen, collection: Collection | null, state: ViewS
   };
   if (screen === 'comparison') {
     return comparisonPage(collection, {
-      sorting, comparisonError, comparisonRevision, comparisonConflict, displayFields, loading: state.import.loading,
-    }, panel);
+      sorting, comparisonError, comparisonRevision, comparisonConflict, displayFields,
+      groupDisplay: state.groupDisplay, loading: state.import.loading,
+    }, { ...panel, settings: { ...settings, groupDisplay: state.groupDisplay } });
   }
   return resultPage(collection, {
     data: resultViewData(collection, sorting), displayFields, feedback: { sorting, comparisonError, comparisonConflict },

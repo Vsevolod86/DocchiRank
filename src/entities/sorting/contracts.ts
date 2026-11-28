@@ -1,4 +1,5 @@
-import type { EngineInput, Item, SessionInput, Strategy } from './session';
+import { FORECAST_SETTINGS, SORTING_SETTINGS } from '../../config/sorting';
+import type { AlgorithmPosition, EngineInput, Item, SessionInput, Strategy } from './session';
 
 const comparisonEstimates = new Map<string, { insertion: number; merge: number; selected: Strategy }>();
 
@@ -81,7 +82,7 @@ export function estimateComparisons(knownGroups: number, pending: number): { ins
   const merge = Math.max(0, pending - 1) + maximumMergeBudget;
   const estimate = { insertion, merge, selected: insertion <= merge ? 'insertion' as const : 'merge' as const };
   comparisonEstimates.set(key, estimate);
-  if (comparisonEstimates.size > 128) comparisonEstimates.delete(comparisonEstimates.keys().next().value!);
+  if (comparisonEstimates.size > SORTING_SETTINGS.estimateCacheSize) comparisonEstimates.delete(comparisonEstimates.keys().next().value!);
   return { ...estimate };
 }
 
@@ -91,13 +92,54 @@ export function forecastComparisons(knownGroups: number, pending: number, strate
   // Коэффициенты подобраны для покрытия около 95% синтетических сессий.
   if (strategy === 'insertion') {
     const averageSize = Math.max(1, knownGroups + (pending - 1) / 2);
-    const searchWork = 1.5 * Math.log2(averageSize) - 0.5;
-    const knownWork = 0.75 * Math.log2(1 + knownGroups / pending);
+    const { searchMultiplier, searchOffset, knownMultiplier } = FORECAST_SETTINGS.insertion;
+    const searchWork = searchMultiplier * Math.log2(averageSize) - searchOffset;
+    const knownWork = knownMultiplier * Math.log2(1 + knownGroups / pending);
     return Math.round(pending * Math.max(1, searchWork + knownWork));
   }
-  const pendingWork = (pending - 1) * Math.max(1.5, Math.log2(pending) - 1.5);
-  const knownMergeWork = 2 * pending * Math.log2(1 + knownGroups / pending);
-  return Math.round(1.36 * (pendingWork + knownMergeWork));
+  const { minimumRunWork, runOffset, knownMultiplier, margin } = FORECAST_SETTINGS.merge;
+  const pendingWork = (pending - 1) * Math.max(minimumRunWork, Math.log2(pending) - runOffset);
+  const knownMergeWork = knownMultiplier * pending * Math.log2(1 + knownGroups / pending);
+  return Math.round(margin * (pendingWork + knownMergeWork));
+}
+
+/** Оценивает оставшуюся работу по размещённым тайтлам и подтверждённым блокам. */
+export function forecastRemainingComparisons(input: SessionInput, position: AlgorithmPosition, strategy: Strategy, answered: number): number {
+  if (position.phase === 'done') return 0;
+  const { orderedGroups, runs } = position;
+  const knownTitles = input.known.reduce((count, group) => count + group.length, 0);
+  const placedTitles = orderedGroups.reduce((count, group) => count + group.length, 0);
+  const pending = knownTitles + input.pending.length - placedTitles;
+  if (strategy === 'insertion') {
+    const forecast = forecastComparisons(orderedGroups.length, pending, strategy);
+    const estimatedSpent = forecastComparisons(input.known.length, input.pending.length - pending, strategy);
+    // Если вставки идут медленнее начальной модели, учитываем фактический темп с запасом.
+    const pace = Math.max(1, FORECAST_SETTINGS.insertion.paceMargin * answered / Math.max(1, estimatedSpent));
+    return Math.ceil(forecast * pace);
+  }
+
+  const runLengths = runs.map(run => run.length);
+  if (position.phase === 'runs') {
+    const scanned = runs.flat().reduce((count, group) => count + group.length, 0);
+    const unscanned = pending - scanned;
+    const blocks = orderedGroups.length ? [orderedGroups.length, ...runLengths] : runLengths;
+    // Пока направление не проверено, закладываем короткие блоки для оставшегося хвоста.
+    const { assumedRunSize } = FORECAST_SETTINGS.merge;
+    const runSize = Number.isSafeInteger(assumedRunSize) && assumedRunSize > 0 ? assumedRunSize : 1;
+    for (let remaining = unscanned; remaining > 0; remaining -= runSize) blocks.push(Math.min(runSize, remaining));
+    return unscanned + forecastMergeWork(blocks);
+  }
+
+  const [merged = 0, left = 0, right = 0, ...rest] = runLengths;
+  const currentMerge = Math.max(0, left + right - 1);
+  return forecastMergeWork([merged + left + right, ...rest], currentMerge);
+}
+
+/** Оценивает затраты попарных слияний с тем же запасом, что и начальный прогноз. */
+function forecastMergeWork(blocks: number[], currentMerge = 0): number {
+  const depths = mergeDepths(blocks.length);
+  const work = blocks.reduce((sum, size, index) => sum + size * depths[index]!, 0);
+  return Math.ceil(FORECAST_SETTINGS.merge.margin * (currentMerge + work - Math.max(0, blocks.length - 1)));
 }
 
 /** Считает число участий каждого блока в фактическом попарном bottom-up дереве слияния. */

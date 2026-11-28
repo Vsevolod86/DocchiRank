@@ -1,3 +1,4 @@
+import { INTERFACE_TIMING } from '../../config/interface';
 import type { Collection, Score } from '../../entities/collection/model';
 import { listMedia } from '../../entities/collection/model';
 import type { ListMetadataSource } from '../../integrations/list-source';
@@ -8,9 +9,7 @@ import { renderButton } from '../../shared/ui/button';
 import { renderInput } from '../../shared/ui/input';
 import { normalizeShikimoriProfilePaste, renderShikimoriProfileField } from '../shikimori/profile-field';
 
-const downloadNoticeMs = 5_000;
 const downloadNoticeKey = 'docchirank.shikimori-download-notice-seen';
-const downloadNoticeRepeatChance = 0.2;
 let noticeShownWithoutStorage = false;
 
 /** Подготавливает обновлённую выгрузку и ссылки для проверенного профиля. */
@@ -224,7 +223,7 @@ export function openShikimoriExportDialog(collection: Collection, grades: Readon
         downloadTimer = setTimeout(() => {
             clearPendingDownload();
             downloadPreparedFile(pending);
-        }, downloadNoticeMs);
+        }, INTERFACE_TIMING.downloadNoticeMs);
     });
     dialog.addEventListener('close', () => {
         clearPendingDownload();
@@ -238,10 +237,10 @@ export function openShikimoriExportDialog(collection: Collection, grades: Readon
 
 /** Показывает уведомление при первом скачивании, затем применяет вероятность повторного показа. */
 function shouldShowDownloadNotice(): boolean {
-    if (noticeShownWithoutStorage) return Math.random() < downloadNoticeRepeatChance;
+    if (noticeShownWithoutStorage) return Math.random() < INTERFACE_TIMING.downloadNoticeRepeatChance;
     try {
         const storage = window.localStorage;
-        if (storage.getItem(downloadNoticeKey) === '1') return Math.random() < downloadNoticeRepeatChance;
+        if (storage.getItem(downloadNoticeKey) === '1') return Math.random() < INTERFACE_TIMING.downloadNoticeRepeatChance;
         storage.setItem(downloadNoticeKey, '1');
     } catch {
         noticeShownWithoutStorage = true;

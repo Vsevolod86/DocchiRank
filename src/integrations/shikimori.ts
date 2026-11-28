@@ -1,3 +1,4 @@
+import { SHIKIMORI_REQUESTS } from '../config/shikimori';
 import type { Profile, SourceSnapshot } from '../entities/collection/model';
 import { listMedia } from '../entities/collection/model';
 import { mergeAnimeMetadata } from '../entities/collection/anime-metadata';
@@ -24,7 +25,7 @@ export class ShikimoriSource implements ListMetadataSource {
     if (access !== null && !Array.isArray(access)) throw invalidResponse();
 
     return collectShikimoriList(async (page, loaded) => {
-      const query = `{ userRates(userId: "${profile.id}", targetType: ${SHIKIMORI_TARGET_TYPE[media]}, limit: 50, page: ${page}) {
+      const query = `{ userRates(userId: "${profile.id}", targetType: ${SHIKIMORI_TARGET_TYPE[media]}, limit: ${SHIKIMORI_REQUESTS.listPageSize}, page: ${page}) {
         id score status ${media} { ${workFields} }
       } }`;
       const result = await this.request('/api/graphql', {
@@ -41,7 +42,7 @@ export class ShikimoriSource implements ListMetadataSource {
     return parseProfile(rawProfile);
   }
 
-  /** Читает публичные метаданные пакетами по 50, сохраняя завершённые пакеты при отказе. */
+  /** Читает публичные метаданные пакетами, сохраняя завершённые пакеты при отказе. */
   async enrich(source: SourceSnapshot, options: ImportOptions = {}): Promise<MetadataResult> {
     validateSourceSnapshot(source);
     const media = listMedia(source);
@@ -49,9 +50,13 @@ export class ShikimoriSource implements ListMetadataSource {
     let snapshot = structuredClone(source);
     let matched = 0;
     try {
-      for (let offset = 0; offset < source.animes.length; offset += 50) {
-        const ids = source.animes.slice(offset, offset + 50).map(anime => anime.id);
-        const query = `query($ids: String!) { ${media}s(ids: $ids, limit: 50) { ${workFields} } }`;
+      const { metadataBatchSize } = SHIKIMORI_REQUESTS;
+      if (!Number.isSafeInteger(metadataBatchSize) || metadataBatchSize < 1) {
+        throw new ImportError('input', 'Размер пакета метаданных в настройках должен быть положительным целым числом.');
+      }
+      for (let offset = 0; offset < source.animes.length; offset += metadataBatchSize) {
+        const ids = source.animes.slice(offset, offset + metadataBatchSize).map(anime => anime.id);
+        const query = `query($ids: String!) { ${media}s(ids: $ids, limit: ${metadataBatchSize}) { ${workFields} } }`;
         const response = await this.request('/api/graphql', {
           method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query, variables: { ids: ids.join(',') } }),
         }, options, { stage: 'metadata', loaded: offset, total: source.animes.length });
@@ -81,11 +86,11 @@ export class ShikimoriSource implements ListMetadataSource {
   /** Выполняет запрос без cookies и токена с тайм-аутом и обработкой охлаждения после 429. */
   private async fetchJson(path: string, init: RequestInit, options: ImportOptions, progress: ImportProgress): Promise<unknown> {
     const delay = this.notBefore - Date.now();
-    if (delay > 1000) options.onProgress?.({ stage: 'waiting', loaded: progress.loaded, waitSeconds: Math.ceil(delay / 1000) });
+    if (delay > SHIKIMORI_REQUESTS.reportWaitAfterMs) options.onProgress?.({ stage: 'waiting', loaded: progress.loaded, waitSeconds: Math.ceil(delay / 1000) });
     await wait(delay, options.signal);
     options.onProgress?.(progress);
     const timeout = new AbortController();
-    const timer = setTimeout(() => timeout.abort(), 20_000);
+    const timer = setTimeout(() => timeout.abort(), SHIKIMORI_REQUESTS.timeoutMs);
     const signal = options.signal ? AbortSignal.any([options.signal, timeout.signal]) : timeout.signal;
     try {
       // Браузерный Fetch нельзя вызывать с экземпляром адаптера в качестве this.
@@ -97,7 +102,8 @@ export class ShikimoriSource implements ListMetadataSource {
         const retryAfter = response.headers.get('Retry-After');
         const seconds = retryAfter === null ? NaN : Number(retryAfter);
         const retryAt = Number.isFinite(seconds) && seconds >= 0 ? Date.now() + seconds * 1000 : Date.parse(retryAfter ?? '');
-        this.notBefore = Math.max(Date.now() + 800, Number.isFinite(retryAt) && retryAt > Date.now() ? retryAt : Date.now() + 60_000);
+        this.notBefore = Math.max(Date.now() + SHIKIMORI_REQUESTS.intervalMs,
+          Number.isFinite(retryAt) && retryAt > Date.now() ? retryAt : Date.now() + SHIKIMORI_REQUESTS.retryFallbackMs);
         throw new ImportError('rate-limit', 'Shikimori ограничил частоту запросов. Подожди немного и повтори загрузку.');
       }
       if (response.status === 404) throw new ImportError('not-found', 'Профиль не найден или недоступен.\nПроверь ник.');
@@ -115,12 +121,12 @@ export class ShikimoriSource implements ListMetadataSource {
       }
     } catch (error) {
       if (options.signal?.aborted) throw cancelledImport();
-      if (timeout.signal.aborted) throw new ImportError('timeout', 'Shikimori не ответил за 20 секунд. Повтори загрузку.');
+      if (timeout.signal.aborted) throw new ImportError('timeout', `Shikimori не ответил за ${SHIKIMORI_REQUESTS.timeoutMs / 1000} секунд. Повтори загрузку.`);
       if (error instanceof ImportError) throw error;
       throw new ImportError('network', 'Не удалось связаться с Shikimori. Проверь соединение и повтори загрузку.');
     } finally {
       clearTimeout(timer);
-      this.notBefore = Math.max(this.notBefore, Date.now() + 800);
+      this.notBefore = Math.max(this.notBefore, Date.now() + SHIKIMORI_REQUESTS.intervalMs);
     }
   }
 }

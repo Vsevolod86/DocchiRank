@@ -2,6 +2,8 @@ import { statusLabels } from '../../entities/anime/anime-card';
 import type { AnimeDisplayFields } from '../../entities/anime/anime-card';
 import { LIST_STATUSES } from '../../entities/collection/model';
 import type { ListMedia } from '../../entities/collection/model';
+import { GROUP_DISPLAYS } from '../../features/collection/group-display';
+import type { GroupDisplay } from '../../features/collection/group-display';
 import { kindFilters } from '../../features/selection/filters';
 import type { BinaryFilterGroup, DisplayFilters, FilterMode, KindFilter } from '../../features/selection/filters';
 import { LIST_SORTS } from '../../features/selection/list-order';
@@ -24,6 +26,7 @@ const KIND_LABELS: Record<KindFilter, string> = {
 export interface SettingsOptions {
     collapsedGroups: Readonly<Record<PanelGroup, boolean>>;
     displayFields: Readonly<AnimeDisplayFields>;
+    groupDisplay?: GroupDisplay;
     filters: DisplayFilters;
     listSort: ListSort;
     loading: boolean;
@@ -50,7 +53,19 @@ function displaySettings(state: SettingsOptions): string {
     <div id="panel-display-options" class="panel-section-content" ${state.collapsedGroups.display ? 'hidden' : ''}>
     ${fields.map(([key, caption]) => `<label>${renderInput({
         type: 'checkbox', name: 'display-field', value: key, checked: state.displayFields[key], disabled: state.loading,
-    })}${caption}</label>`).join('')}</div></section>`;
+    })}${caption}</label>`).join('')}
+    ${state.groupDisplay ? groupDisplayOptions(state.groupDisplay, state.loading) : ''}
+    </div></section>`;
+}
+
+/** Показывает выбор одного способа отображения группы с отметкой у активного пункта. */
+function groupDisplayOptions(selected: GroupDisplay, disabled: boolean): string {
+    return `<fieldset class="group-display-options">
+      <legend>Показ групп</legend>
+      ${GROUP_DISPLAYS.map(({ key, label }) => `<label>${renderInput({
+        type: 'radio', name: 'comparison-group-display', value: key, checked: selected === key, disabled,
+      })}<span class="group-display-check" aria-hidden="true"></span>${label}</label>`).join('')}
+    </fieldset>`;
 }
 
 /** Сохраняет группы условий внутри общего подраздела фильтров. */

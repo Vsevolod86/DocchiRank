@@ -1,3 +1,4 @@
+import { DEFAULT_IMPORT_MEDIA, SCREEN_DEFAULTS } from '../../config/interface';
 import { mergeAnimeMetadata } from '../../entities/collection/anime-metadata';
 import { createCollection } from '../../entities/collection/collection';
 import type { Collection, ListMedia, SourceSnapshot } from '../../entities/collection/model';
@@ -41,7 +42,10 @@ interface ImportCallbacks {
 /** Выполняет импорт списка и отменяемую подгрузку метаданных. */
 export class ListImport {
   private controller: AbortController | null = null;
-  private state: ImportStatus = { method: 'profile', media: 'anime', profileInput: '', loading: false, cancellable: false, message: '', error: null };
+  private state: ImportStatus = {
+    method: SCREEN_DEFAULTS.importMode, media: DEFAULT_IMPORT_MEDIA, profileInput: '',
+    loading: false, cancellable: false, message: '', error: null,
+  };
 
   /** Принимает источники, хранилище и операции с коллекцией. */
   constructor(private readonly sources: ImportSources, private readonly store: CollectionStore, private readonly callbacks: ImportCallbacks) {}

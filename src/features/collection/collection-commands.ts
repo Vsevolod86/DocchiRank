@@ -1,3 +1,4 @@
+import { RATING_DEFAULTS } from '../../config/ratings';
 import { beginComparison, comparisonSelection, updateComparisonSelection } from '../../entities/collection/comparison';
 import type { Collection, Score } from '../../entities/collection/model';
 import { presetRatingCutoffs, ratingAssignments, reconcileRatings, scaleFromCutoffs, scaleToCutoffs, setGroupRating } from '../../entities/collection/ratings';
@@ -6,8 +7,6 @@ import { PairwiseSorterEngine } from '../../entities/sorting/engine';
 import { isRelation } from '../../entities/sorting/journal';
 import type { Relation } from '../../entities/sorting/relations';
 import type { Answer, EngineView, MutationResult } from '../../entities/sorting/session';
-
-const defaultRatingCenter = 6;
 
 /** Снимок текущего сравнения, пересмотра и команд оценивания. */
 export interface CollectionView {
@@ -25,7 +24,7 @@ export class CollectionCommands {
   private readonly openedResults = new Set<string>();
   private readonly state: CollectionView = {
     sorting: null, comparisonError: null, comparisonRevision: null, comparisonConflict: null,
-    ratingEditor: { center: defaultRatingCenter, method: 'manual', error: null },
+    ratingEditor: { center: RATING_DEFAULTS.center, method: 'manual', error: null },
   };
 
   /** Текущая коллекция для отображения, выбора произведений и импорта. */
@@ -40,7 +39,7 @@ export class CollectionCommands {
   /** Принимает обновлённый снимок коллекции и подготавливает представление её сессии. */
   replaceCollection(collection: Collection): void {
     if (this.active?.id !== collection.id) {
-      this.state.ratingEditor = { center: defaultRatingCenter, method: 'manual', error: null };
+      this.state.ratingEditor = { center: RATING_DEFAULTS.center, method: 'manual', error: null };
     }
     if (this.active?.session !== collection.session) {
       this.engine = collection.session ? PairwiseSorterEngine.restore(collection.session) : null;
@@ -65,9 +64,10 @@ export class CollectionCommands {
     if (view?.status !== 'complete' || !collection || this.openedResults.has(collection.id)) return false;
     this.openedResults.add(collection.id);
     if (collection.ratings.topScore !== null || collection.ratings.manualStart || collection.ratingTransition) return false;
-    this.state.ratingEditor.center = defaultRatingCenter;
-    this.state.ratingEditor.method = 'bell';
-    collection.ratings = scaleFromCutoffs(view.orderedGroups, presetRatingCutoffs(view.orderedGroups, 'bell', defaultRatingCenter));
+    const { center, preset } = RATING_DEFAULTS;
+    this.state.ratingEditor.center = center;
+    this.state.ratingEditor.method = preset;
+    collection.ratings = scaleFromCutoffs(view.orderedGroups, presetRatingCutoffs(view.orderedGroups, preset, center));
     return true;
   }
 

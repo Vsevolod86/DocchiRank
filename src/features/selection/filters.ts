@@ -1,3 +1,4 @@
+import { SELECTION_DEFAULTS } from '../../config/selection';
 import { LIST_KINDS, LIST_STATUSES, listMedia } from '../../entities/collection/model';
 import type { Collection, ListEntry, ListMedia, ListStatus, Score, WorkKind } from '../../entities/collection/model';
 
@@ -39,13 +40,10 @@ export function createDisplayFilters(): DisplayFilters {
 /** Готовит начальный отбор просмотренных или прочитанных произведений. */
 export function initialDisplayFilters(media: ListMedia): DisplayFilters {
   const filters = createDisplayFilters();
-  filters.status.completed = true;
-  filters.status.rewatching = true;
-  if (media === 'anime') {
-    filters.kind.tv = true;
-    filters.kind.movie = true;
-    filters.kind.ona = true;
-  }
+  for (const status of SELECTION_DEFAULTS.statuses) filters.status[status] = true;
+  for (const kind of SELECTION_DEFAULTS.kinds[media]) filters.kind[kind] = true;
+  filters.score = { ...SELECTION_DEFAULTS.score };
+  filters.selection = SELECTION_DEFAULTS.selection;
   return filters;
 }
 

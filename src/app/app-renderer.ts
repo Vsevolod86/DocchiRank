@@ -2,6 +2,7 @@ import { exportCollectionButton } from '../features/backup/export-button';
 import type { PageDetail, SidePanelView } from '../pages/page-view';
 import { renderButton } from '../shared/ui/button';
 import { observeAnimeCardTitles } from '../widgets/anime-card-layout';
+import { startComparisonCarousels } from '../widgets/comparison/comparison-carousels';
 import { ResultWidgets } from '../widgets/result/result-widgets';
 import type { AppView } from './app-view';
 import { SettingsDialog } from './settings-dialog';
@@ -24,6 +25,7 @@ export class AppRenderer {
     private contentChangedInPlace = false;
     private navigationChangedInPlace = false;
     private animeCardTitles: ResizeObserver | null = null;
+    private stopComparisonCarousels: (() => void) | null = null;
     private readonly resultWidgets = new ResultWidgets();
 
     /** Создаёт оболочку один раз, оставляя навигацию и рабочую область на прежних местах. */
@@ -119,9 +121,11 @@ export class AppRenderer {
             const scenarioScrollLeft = scenarios?.scrollLeft;
             const activeScenario = scenarios?.querySelector<HTMLInputElement>('.scenario-card.active input')?.value;
             this.animeCardTitles?.disconnect();
+            this.stopComparisonCarousels?.();
             this.content.innerHTML = view.content;
             this.restoreScenarioScroll(scenarioScrollLeft, activeScenario);
             this.animeCardTitles = observeAnimeCardTitles(this.content);
+            this.stopComparisonCarousels = startComparisonCarousels(this.content);
         }
         for (const detail of view.details) {
             if (replaceContent || previous?.details.find(item => item.id === detail.id)?.markup !== detail.markup) {

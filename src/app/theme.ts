@@ -1,12 +1,15 @@
+import { DEFAULT_THEME } from '../config/interface';
+
 // Ключ сохраняет выбранную тему между версиями приложения.
 const themeKey = 'tiersort.theme';
 
 /** Применяет сохранённую тему к документу перед отрисовкой приложения. */
 export function restoreTheme(document: Document): void {
   try {
-    document.documentElement.dataset.theme = document.defaultView?.localStorage.getItem(themeKey) === 'dark' ? 'dark' : 'light';
+    const savedTheme = document.defaultView?.localStorage.getItem(themeKey);
+    document.documentElement.dataset.theme = savedTheme === 'dark' || savedTheme === 'light' ? savedTheme : DEFAULT_THEME;
   } catch {
-    document.documentElement.dataset.theme = 'light';
+    document.documentElement.dataset.theme = DEFAULT_THEME;
   }
 }
 

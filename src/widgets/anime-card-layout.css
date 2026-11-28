@@ -11,8 +11,11 @@
 .large .anime-choice {
     position: relative;
     isolation: isolate;
-    aspect-ratio: 2 / 3;
-    min-height: calc(22rem / var(--anime-card-size-divisor, 1));
+}
+
+.large :is(.anime-choice, .comparison-group) {
+    aspect-ratio: var(--large-card-aspect-ratio);
+    min-height: calc(var(--large-card-min-height) / var(--anime-card-size-divisor, 1));
 }
 
 .large .cover-wrap {
@@ -41,7 +44,7 @@
     background: var(--surface);
     opacity: .95;
     pointer-events: none;
-    transition: opacity .2s;
+    transition: opacity var(--card-overlay-transition);
 }
 
 .large .choice-titles .card-title {

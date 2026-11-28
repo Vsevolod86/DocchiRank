@@ -57,6 +57,80 @@ describe('сравнение реальной коллекции', () => {
     expect(session().history.at(-1)?.answer).toBe('tie');
   });
 
+  it('показывает состав группы равных и принимает один ответ за всю сторону', async () => {
+    button('[data-action="load-demo"]').click();
+    await vi.waitFor(() => expect(root.querySelectorAll('.anime-choice')).toHaveLength(9));
+    button('[data-action="start-comparison"]').click();
+    for (let count = 0; count < 3; count++) button('[data-action="answer"][data-answer="tie"]').click();
+    button('[data-panel-group="settings"]').click();
+    root.querySelector<HTMLInputElement>('[name="comparison-group-display"][value="list"]')!.click();
+
+    const group = root.querySelector<HTMLElement>('.comparison-group')!;
+    expect(group.getAttribute('aria-label')).toBe('4 тайтла на одном месте');
+    expect(group.querySelectorAll('ul:not([hidden]) .comparison-group-cover img')).toHaveLength(4);
+    expect(group.querySelectorAll('button')).toHaveLength(1);
+    root.querySelector<HTMLInputElement>('[name="display-field"][value="russianTitle"]')!.click();
+    root.querySelector<HTMLInputElement>('[name="display-field"][value="originalTitle"]')!.click();
+
+    const groupList = root.querySelector<HTMLElement>('.comparison-group-scroll')!;
+    expect(groupList.querySelectorAll('li > span.visually-hidden')).toHaveLength(4);
+    groupList.focus();
+    expect(pressKey('ArrowDown')).toBe(false);
+    expect(root.querySelector('.comparison-progress-label strong')?.textContent).toBe('3');
+    const shortcut = groupList.closest('.comparison-group')!.querySelector('[aria-keyshortcuts]')!.getAttribute('aria-keyshortcuts')!;
+    expect(pressKey(shortcut)).toBe(true);
+    expect(root.querySelector('.comparison-progress-label strong')?.textContent).toBe('4');
+  });
+
+  it('переключает способ показа группы и циклически меняет карточки каждые 2 секунды', async () => {
+    button('[data-action="load-demo"]').click();
+    await vi.waitFor(() => expect(root.querySelectorAll('.anime-choice')).toHaveLength(9));
+    button('[data-action="start-comparison"]').click();
+    button('[data-action="answer"][data-answer="tie"]').click();
+    const group = root.querySelector('[data-comparison-carousel]')!;
+    const onLeft = group.hasAttribute('data-comparison-left');
+    const side = onLeft ? 'left' : 'right';
+    const representative = group.getAttribute(`data-comparison-${side}`);
+    button('[data-panel-group="settings"]').click();
+    const mode = (value: string) => root.querySelector<HTMLInputElement>(`[name="comparison-group-display"][value="${value}"]`)!;
+    expect(mode('carousel').checked).toBe(true);
+    expect(root.querySelector<HTMLInputElement>('[name="comparison-group-display"]')?.value).toBe('carousel');
+
+    mode('representative').click();
+    expect(root.querySelector('.comparison-group')).toBeNull();
+    expect(root.querySelector(`.comparison-choice[data-comparison-${side}]`)?.getAttribute(`data-comparison-${side}`)).toBe(representative);
+
+    vi.useFakeTimers();
+    try {
+      mode('carousel').click();
+      const carousel = root.querySelector('[data-comparison-carousel]')!;
+      const visibleWork = () => carousel.querySelector('[data-carousel-slide]:not([hidden]) [data-carousel-work]')?.getAttribute('data-carousel-work');
+      expect(root.querySelectorAll('[name="comparison-group-display"]:checked')).toHaveLength(1);
+      expect(visibleWork()).toBe(representative);
+      vi.advanceTimersByTime(1999);
+      expect(visibleWork()).toBe(representative);
+      vi.advanceTimersByTime(1);
+      const second = visibleWork();
+      expect(second).not.toBe(representative);
+
+      const pause = carousel.querySelector<HTMLButtonElement>('.comparison-carousel-pause')!;
+      pause.click();
+      vi.advanceTimersByTime(2000);
+      expect(visibleWork()).toBe(second);
+      pause.click();
+      vi.advanceTimersByTime(2000);
+      expect(visibleWork()).toBe(representative);
+
+      root.querySelector<HTMLElement>('.comparison-section h1')!.focus();
+      expect(pressKey(onLeft ? 'ArrowLeft' : 'ArrowRight')).toBe(true);
+      expect(root.querySelector('.comparison-progress-label strong')?.textContent).toBe('2');
+      mode('list').click();
+      expect(root.querySelector('[data-comparison-carousel]')).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('принимает стрелку сравнения с фокусом на флажке настройки', async () => {
     await importAndStart();
     button('[data-panel-group="settings"]').click();

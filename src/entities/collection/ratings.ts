@@ -1,3 +1,4 @@
+import { RATING_DEFAULTS } from '../../config/ratings';
 import type { RatingScale, RatingTransition, Score } from './model';
 
 export type RatingThreshold = Exclude<Score, 1>;
@@ -101,7 +102,7 @@ export function setGroupRating(groups: readonly (readonly string[])[], cutoffs: 
 }
 
 /** Создаёт равные доли либо ограниченный колокол со средним center, округляя по целым классам. */
-export function presetRatingCutoffs(groups: readonly (readonly string[])[], preset: 'uniform' | 'bell', center = 7): RatingCutoffs {
+export function presetRatingCutoffs(groups: readonly (readonly string[])[], preset: 'uniform' | 'bell', center: number = RATING_DEFAULTS.formulaCenter): RatingCutoffs {
   if (preset !== 'uniform' && preset !== 'bell') throw new Error('Неизвестный пресет оценок.');
   if (preset === 'bell' && (!Number.isFinite(center) || center < 1 || center > 10)) throw new Error('Центр распределения должен быть от 1 до 10.');
   const positions = ratingPositions(groups);

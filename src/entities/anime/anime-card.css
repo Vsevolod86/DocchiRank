@@ -3,7 +3,7 @@
     border-radius: 12px;
     overflow: hidden;
     cursor: pointer;
-    transition: border-color .15s;
+    transition: border-color var(--card-border-transition);
 }
 
 .anime-choice.selected {

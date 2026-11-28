@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import { FORECAST_SETTINGS } from '../../config/sorting';
 import { PairwiseSorterEngine } from './engine';
-import { estimateComparisons, priorOrder } from './contracts';
+import { estimateComparisons, forecastRemainingComparisons, priorOrder } from './contracts';
 import { Relations } from './relations';
 import type { Answer, EngineInput, Item, Strategy } from './session';
 
@@ -54,6 +55,18 @@ describe('контракты и оценки вопросов', () => {
     }
   });
 
+  it('даёт конечный прогноз слияния при неверном размере блока', () => {
+    const engine = new PairwiseSorterEngine({ known: [], pending: [1, 2, 3, 4].map(id => item(id)) }, { strategy: 'merge' });
+    const { input, progress: { position } } = engine.getState();
+    const { assumedRunSize } = FORECAST_SETTINGS.merge;
+    Object.assign(FORECAST_SETTINGS.merge, { assumedRunSize: NaN });
+    try {
+      expect(forecastRemainingComparisons(input, position, 'merge', 0)).toBeGreaterThan(0);
+    } finally {
+      Object.assign(FORECAST_SETTINGS.merge, { assumedRunSize });
+    }
+  });
+
   it('выводит транзитивность, отделяет прямые ответы и отклоняет ничью через строгий путь', () => {
     const graph = new Relations({ known: [], pending: ['1', '2', '3'] });
     graph.add({ leftId: '1', rightId: '2', answer: 'left', eventId: 'a' });
@@ -66,6 +79,37 @@ describe('контракты и оценки вопросов', () => {
 });
 
 describe.each<Strategy>(['insertion', 'merge'])('стратегия %s', strategy => {
+  it('уточняет прогноз после каждых ста прямых ответов и восстанавливает его из журнала', () => {
+    const engine = new PairwiseSorterEngine({ known: [], pending: shuffled(150, 17).map(value => item(value)) }, { strategy });
+    const forecast = () => {
+      const view = engine.getView();
+      return view.directComparisonCount + view.remainingEstimate;
+    };
+    const initial = forecast();
+    for (let answered = 0; answered < 99; answered++) expect(engine.answer(response(engine)).ok).toBe(true);
+    expect(forecast()).toBe(initial);
+    expect(engine.answer('skip').ok).toBe(true);
+    expect(forecast()).toBe(initial);
+
+    expect(engine.answer(response(engine)).ok).toBe(true);
+    const firstUpdate = forecast();
+    expect(firstUpdate).not.toBe(initial);
+    for (let answered = 100; answered < 199; answered++) expect(engine.answer(response(engine)).ok).toBe(true);
+    expect(forecast()).toBe(firstUpdate);
+
+    expect(engine.answer(response(engine)).ok).toBe(true);
+    const secondUpdate = forecast();
+    expect(secondUpdate).not.toBe(firstUpdate);
+    expect(engine.answer(response(engine)).ok).toBe(true);
+    expect(forecast()).toBe(secondUpdate);
+
+    const restored = PairwiseSorterEngine.restore(engine.getState());
+    expect(restored.getView().remainingEstimate).toBe(engine.getView().remainingEstimate);
+    engine.undo();
+    engine.undo();
+    expect(forecast()).toBe(firstUpdate);
+  });
+
   it('считает все транзитивные следствия обычных ответов, даже если алгоритм их не запрашивал', () => {
     const engine = new PairwiseSorterEngine({ known: [], pending: [1, 2, 3, 4].map(value => item(value)) }, { strategy });
     engine.answer(response(engine));

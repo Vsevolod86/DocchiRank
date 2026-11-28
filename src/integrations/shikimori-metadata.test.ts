@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { SHIKIMORI_REQUESTS } from '../config/shikimori';
 import type { SourceSnapshot } from '../entities/collection/model';
 import { ShikimoriSource } from './shikimori';
 
@@ -50,6 +51,20 @@ describe('публичные сведения для JSON-списка', () => {
     expect(result.snapshot.entries).toHaveLength(2);
     expect((await source.enrich(snapshot(0))).matched).toBe(0);
     expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+
+  it('отклоняет нулевой размер пакета до запроса', async () => {
+    const { metadataBatchSize } = SHIKIMORI_REQUESTS;
+    const fetcher = vi.fn<typeof fetch>().mockRejectedValue(new Error('Неожиданный запрос.'));
+    Object.assign(SHIKIMORI_REQUESTS, { metadataBatchSize: 0 });
+    try {
+      const result = await new ShikimoriSource(fetcher).enrich(snapshot(1));
+      expect(result.error).toMatchObject({ code: 'input' });
+      expect(result.snapshot).toEqual(snapshot(1));
+      expect(fetcher).not.toHaveBeenCalled();
+    } finally {
+      Object.assign(SHIKIMORI_REQUESTS, { metadataBatchSize });
+    }
   });
 
   it('при сетевом отказе сохраняет завершённые пакеты и позволяет повторить загрузку', async () => {

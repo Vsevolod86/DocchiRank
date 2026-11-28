@@ -1,3 +1,4 @@
+import { SHIKIMORI_REQUESTS } from '../config/shikimori';
 import type { ListEntry, ListMedia, ListStatus, Profile, SourceSnapshot, Work } from '../entities/collection/model';
 import { isWorkKind, LIST_STATUSES } from '../entities/collection/model';
 import type { ImportOptions } from './list-source';
@@ -70,7 +71,7 @@ export async function collectShikimoriList(
       byWork.set(rate.anime.id, rate);
     }
     options.onProgress?.({ stage: 'entries', loaded: byWork.size });
-    if (rates.length < 50) break;
+    if (rates.length < SHIKIMORI_REQUESTS.listPageSize) break;
     if (byWork.size === previousSize) {
       throw new ImportError('response', 'Shikimori повторяет одну страницу списка. Повтори загрузку позже.');
     }
@@ -92,7 +93,7 @@ export function parseRatesPage(value: unknown, importedAt: string, media: ListMe
     throw new ImportError('response', 'Shikimori не смог полностью вернуть список. Повтори загрузку.');
   }
   const rates = record(response.data).userRates;
-  if (!Array.isArray(rates) || rates.length > 50) throw invalidResponse();
+  if (!Array.isArray(rates) || rates.length > SHIKIMORI_REQUESTS.listPageSize) throw invalidResponse();
   return rates.map(value => {
     const rate = record(value);
     const score = rate.score;
@@ -115,7 +116,7 @@ export function parseWorkPage(value: unknown, media: ListMedia): Work[] {
   const response = record(value);
   if (response.errors !== undefined && (!Array.isArray(response.errors) || response.errors.length > 0)) throw invalidResponse();
   const works = record(response.data)[`${media}s`];
-  if (!Array.isArray(works) || works.length > 50) throw invalidResponse();
+  if (!Array.isArray(works) || works.length > SHIKIMORI_REQUESTS.metadataBatchSize) throw invalidResponse();
   return works.map(work => parseWork(work, media));
 }
 

@@ -78,6 +78,7 @@ export function storedSortingSession({ progress, ...session }: SortingSession): 
 /** Точные счётчики пар и независимый служебный прогноз числа вопросов для интерфейса. */
 export interface EngineView {
   current: CurrentPair | null;
+  currentGroups: { left: string[]; right: string[] } | null;
   orderedGroups: string[][];
   pendingIds: string[];
   comparisonCount: number;

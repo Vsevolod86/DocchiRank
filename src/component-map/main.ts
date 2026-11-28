@@ -1,3 +1,4 @@
+import '../config/interface.css';
 import '../app/layout.css';
 import '../styles.css';
 import '../entities/anime/anime-card.css';

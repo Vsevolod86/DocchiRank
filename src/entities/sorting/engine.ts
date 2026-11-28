@@ -1,4 +1,5 @@
-import { estimateComparisons, forecastComparisons, normalizeSessionInput, priorOrder } from './contracts';
+import { FORECAST_SETTINGS, SORTING_SETTINGS } from '../../config/sorting';
+import { estimateComparisons, forecastComparisons, forecastRemainingComparisons, normalizeSessionInput, priorOrder } from './contracts';
 import { insertion, naturalMerge } from './algorithms';
 import type { SortProgram } from './algorithms';
 import { activeActions, effectiveAnswers, isRelation } from './journal';
@@ -16,6 +17,8 @@ export class PairwiseSorterEngine {
   private readonly ids: string[];
   private readonly initialKnownPairCount: number;
   private readonly comparisonTotal: number;
+  private readonly comparisonUpperBound: number;
+  private forecastTotal = 0;
   private history: SortingEvent[] = [];
   private active: SortingEvent[] = [];
   private answers: SortingEvent[] = [];
@@ -35,10 +38,13 @@ export class PairwiseSorterEngine {
     if (options.strategy !== undefined && !['auto', 'insertion', 'merge'].includes(options.strategy)
       || options.gallopThreshold !== undefined && (!Number.isSafeInteger(options.gallopThreshold) || options.gallopThreshold < 1)
       || options.sessionId !== undefined && (typeof options.sessionId !== 'string' || !options.sessionId.trim())) throw new Error('Некорректные параметры сортировки.');
+    const estimates = estimateComparisons(this.input.known.length, this.input.pending.length);
+    const strategy = options.strategy ?? SORTING_SETTINGS.strategy;
     this.options = {
-      strategy: options.strategy && options.strategy !== 'auto' ? options.strategy : estimateComparisons(input.known.length, input.pending.length).selected,
-      gallopThreshold: options.gallopThreshold ?? 3,
+      strategy: strategy === 'auto' ? estimates.selected : strategy,
+      gallopThreshold: options.gallopThreshold ?? SORTING_SETTINGS.gallopThreshold,
     };
+    this.comparisonUpperBound = estimates[this.options.strategy];
     this.sessionId = options.sessionId ?? crypto.randomUUID();
     const knownIds = this.input.known.flat();
     this.ids = [...knownIds, ...this.input.pending];
@@ -106,7 +112,7 @@ export class PairwiseSorterEngine {
     }), history: copyEvents(this.history) };
     PairwiseSorterEngine.validatedStates.delete(this.sessionId);
     PairwiseSorterEngine.validatedStates.set(this.sessionId, copySession(snapshot));
-    if (PairwiseSorterEngine.validatedStates.size > 32) {
+    if (PairwiseSorterEngine.validatedStates.size > SORTING_SETTINGS.validatedStateCacheSize) {
       PairwiseSorterEngine.validatedStates.delete(PairwiseSorterEngine.validatedStates.keys().next().value!);
     }
     return snapshot;
@@ -118,22 +124,24 @@ export class PairwiseSorterEngine {
     const placed = new Set(orderedGroups.flat());
     const status = this.current ? 'comparing' : 'complete';
     const { strategy } = this.options;
-    const knownGroups = this.input.known.length, pending = this.input.pending.length;
-    const comparisonUpperBound = estimateComparisons(knownGroups, pending)[strategy];
     const directComparisonCount = this.directPairs.size;
     const inferredComparisonCount = this.inferredComparisonCount();
-    const forecast = Math.min(comparisonUpperBound, forecastComparisons(knownGroups, pending, strategy));
     const unansweredPairs = this.comparisonTotal - directComparisonCount - inferredComparisonCount;
     // Сохраняем небольшой запас, если сессия подходит к прогнозу, но вопросы ещё есть.
-    const reserve = Math.max(1, Math.ceil(directComparisonCount / 20));
+    const reserve = Math.max(1, Math.ceil(directComparisonCount / FORECAST_SETTINGS.overrunReserveDivisor));
     const remainingEstimate = status === 'complete' ? 0 :
-      Math.min(unansweredPairs, Math.max(reserve, forecast - directComparisonCount));
+      Math.min(unansweredPairs, Math.max(reserve, this.forecastTotal - directComparisonCount));
     const estimatedTotal = directComparisonCount + remainingEstimate;
     return {
-      current: structuredClone(this.current), orderedGroups,
+      current: structuredClone(this.current),
+      currentGroups: this.current ? {
+        left: this.relations.members(this.current.leftId),
+        right: this.relations.members(this.current.rightId),
+      } : null,
+      orderedGroups,
       pendingIds: this.ids.filter(id => !placed.has(id)),
       comparisonCount: this.history.filter(event => event.type === 'revise' || (event.type === 'answer' || event.type === 'reuse') && isRelation(event.answer)).length,
-      directComparisonCount, comparisonTotal: this.comparisonTotal, comparisonUpperBound, inferredComparisonCount,
+      directComparisonCount, comparisonTotal: this.comparisonTotal, comparisonUpperBound: this.comparisonUpperBound, inferredComparisonCount,
       canSkip: this.hasAlternative(),
       status, strategy, canUndo: this.active.length > 0,
       remainingEstimate, progressPercent: status === 'complete' ? 100 : Math.min(99, Math.round(100 * directComparisonCount / estimatedTotal)),
@@ -251,6 +259,7 @@ export class PairwiseSorterEngine {
     const stable = (ids: string[]): string[] => this.relations.stableGroup(ids);
     this.program = this.options.strategy === 'insertion' ? insertion(known, pending, stable) : naturalMerge(known, pending, this.options.gallopThreshold, stable);
     this.advance();
+    this.refreshForecast();
   }
 
   /** Обновляет действующие ответы и позицию поиска, добавляя событие в журнал только при новом ответе. */
@@ -270,7 +279,18 @@ export class PairwiseSorterEngine {
     } else {
       this.directPairs.add(key);
       this.continueAfterAnswer(answer);
+      if (this.directPairs.size % FORECAST_SETTINGS.refreshEveryAnswers === 0) this.refreshForecast();
     }
+  }
+
+  /** Уточняет прогноз по достигнутой позиции, опираясь на прямые ответы. */
+  private refreshForecast(): void {
+    const answered = this.directPairs.size;
+    const { strategy } = this.options;
+    const remaining = answered === 0
+      ? forecastComparisons(this.input.known.length, this.input.pending.length, strategy)
+      : forecastRemainingComparisons(this.input, this.position, strategy, answered);
+    this.forecastTotal = Math.min(this.comparisonUpperBound, answered + remaining);
   }
 
   /** Пропускает доказанные отношения, останавливаясь только на неизвестной пользователю паре. */

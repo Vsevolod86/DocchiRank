@@ -10,8 +10,10 @@
     border-color: var(--accent-border);
 }
 
-.anime-choice:hover {
-    border-color: var(--accent);
+@media (hover: hover) {
+    .anime-choice:hover {
+        border-color: var(--accent);
+    }
 }
 
 .cover-wrap {

@@ -19,6 +19,7 @@ export class ShikimoriSource implements ListMetadataSource {
   async load(profileInput: string, options: ListLoadOptions = {}): Promise<SourceSnapshot> {
     const media = options.media ?? 'anime';
     const profile = await this.lookupProfile(profileInput, options);
+    options.onProfileVerified?.(profile);
     const access = await this.request(`/api/users/${profile.id}/${media}_rates?limit=1&page=1`, {}, options, { stage: 'access', loaded: 0 });
     if (access !== null && !Array.isArray(access)) throw invalidResponse();
 
@@ -99,7 +100,7 @@ export class ShikimoriSource implements ListMetadataSource {
         this.notBefore = Math.max(Date.now() + 800, Number.isFinite(retryAt) && retryAt > Date.now() ? retryAt : Date.now() + 60_000);
         throw new ImportError('rate-limit', 'Shikimori ограничил частоту запросов. Подожди немного и повтори загрузку.');
       }
-      if (response.status === 404) throw new ImportError('not-found', 'Профиль не найден или недоступен. Проверь ник.');
+      if (response.status === 404) throw new ImportError('not-found', 'Профиль не найден или недоступен.\nПроверь ник.');
       if (response.status === 401 || response.status === 403) {
         throw new ImportError('forbidden', progress.stage === 'profile'
           ? 'Не удалось проверить профиль Shikimori. Попробуй позже.'

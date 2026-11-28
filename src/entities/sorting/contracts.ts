@@ -85,6 +85,21 @@ export function estimateComparisons(knownGroups: number, pending: number): { ins
   return { ...estimate };
 }
 
+/** Оценивает число прямых ответов по стратегии и размерам готовой базы и очереди. */
+export function forecastComparisons(knownGroups: number, pending: number, strategy: Strategy): number {
+  if (pending === 0 || knownGroups + pending < 2) return 0;
+  // Коэффициенты подобраны для покрытия около 95% синтетических сессий.
+  if (strategy === 'insertion') {
+    const averageSize = Math.max(1, knownGroups + (pending - 1) / 2);
+    const searchWork = 1.5 * Math.log2(averageSize) - 0.5;
+    const knownWork = 0.75 * Math.log2(1 + knownGroups / pending);
+    return Math.round(pending * Math.max(1, searchWork + knownWork));
+  }
+  const pendingWork = (pending - 1) * Math.max(1.5, Math.log2(pending) - 1.5);
+  const knownMergeWork = 2 * pending * Math.log2(1 + knownGroups / pending);
+  return Math.round(1.36 * (pendingWork + knownMergeWork));
+}
+
 /** Считает число участий каждого блока в фактическом попарном bottom-up дереве слияния. */
 function mergeDepths(blockCount: number): number[] {
   return Array.from({ length: blockCount }, (_, leaf) => {

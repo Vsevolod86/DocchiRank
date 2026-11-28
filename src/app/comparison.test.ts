@@ -57,6 +57,17 @@ describe('сравнение реальной коллекции', () => {
     expect(session().history.at(-1)?.answer).toBe('tie');
   });
 
+  it('принимает стрелку сравнения с фокусом на флажке настройки', async () => {
+    await importAndStart();
+    button('[data-panel-group="settings"]').click();
+    const checkbox = root.querySelector<HTMLInputElement>('[name="display-field"][value="status"]')!;
+    checkbox.focus();
+
+    expect(pressKey('ArrowLeft')).toBe(true);
+    expect(store.get('shikimori:42')!.session!.history.at(-1)?.answer).toBe('left');
+    expect(root.querySelector('.filter-panel')!.contains(document.activeElement)).toBe(false);
+  });
+
   it('сохраняет навигацию Tab и игнорирует повтор и клавиши вне сравнения', async () => {
     await importAndStart();
     const initial = store.get('shikimori:42')!.session;
@@ -103,28 +114,27 @@ describe('сравнение реальной коллекции', () => {
     expect(store.get('shikimori:42')!.session).toEqual(session);
   });
 
-  it('показывает три счётчика и сохраняет исходный максимум при ответе и пропуске', async () => {
+  it('показывает число прямых ответов и прогноз, включая пропуск и отмену', async () => {
     await importAndStart();
-    const maximum = root.querySelector('[data-comparison-counter="maximum"]')!.textContent;
-    expect(root.querySelector('.comparison-counters')!.textContent!.trim()).toMatch(/^\d+\s*\/\s*\d+\s*\/\s*\d+$/);
+    const progress = () => root.querySelector('[role="progressbar"]')!;
+    const initialEstimate = progress().getAttribute('aria-valuemax');
+    expect(root.querySelector('.comparison-progress-label')!.textContent).toBe(`0 из ~${initialEstimate}`);
+    expect(progress().getAttribute('data-progress-percent')).toBe('0%');
     button('[data-action="answer"][data-answer="left"]').click();
-    expect(root.querySelector('[data-comparison-counter="manual"]')!.textContent).toBe('1');
+    expect(progress().getAttribute('aria-valuenow')).toBe('1');
     button('[data-action="answer"][data-answer="skip"]').click();
-    expect(root.querySelector('[data-comparison-counter="manual"]')!.textContent).toBe('1');
-    expect(root.querySelector('[data-comparison-counter="maximum"]')!.textContent).toBe(maximum);
-    expect(root.querySelector('[data-comparison-counter="inferred"]')!.getAttribute('title')).toBeTruthy();
+    expect(progress().getAttribute('aria-valuenow')).toBe('1');
     button('[data-action="undo-comparison"]').click();
     button('[data-action="undo-comparison"]').click();
-    expect(root.querySelector('[data-comparison-counter="manual"]')!.textContent).toBe('0');
-    expect(root.querySelector('[data-comparison-counter="maximum"]')!.textContent).toBe(maximum);
+    expect(progress().getAttribute('aria-valuenow')).toBe('0');
+    expect(progress().getAttribute('aria-valuemax')).toBe(initialEstimate);
   });
 
-  it('обновляет транзитивный счётчик после обычных ответов и сохраняет свёрнутую историю', async () => {
+  it('сохраняет свёрнутую историю после обычных ответов', async () => {
     await importAndStart();
     expect(root.querySelector<HTMLElement>('#panel-history-options')!.hidden).toBe(true);
     button('[data-action="answer"][data-answer="left"]').click();
     button('[data-action="answer"][data-answer="left"]').click();
-    expect(root.querySelector('[data-comparison-counter="inferred"]')!.textContent).toBe('1');
     expect(root.querySelector<HTMLElement>('#panel-history-options')!.hidden).toBe(true);
     button('[data-panel-group="history"]').click();
     expect(root.querySelector<HTMLElement>('#panel-history-options')!.hidden).toBe(false);
@@ -170,6 +180,37 @@ describe('сравнение реальной коллекции', () => {
     expect(undone.history.length).toBeGreaterThan(skipped.history.length);
   });
 
+  it('продолжает сравнение с оставшимися ответами после снятия отметки и восстановления', async () => {
+    await importAndStart();
+    button('[data-action="answer"][data-answer="left"]').click();
+    button('[data-action="answer"][data-answer="left"]').click();
+    const before = store.get('shikimori:42')!.session!;
+    const [first, retained] = before.history;
+    const removed = [first!.leftId, first!.rightId].find(id => id !== retained!.leftId && id !== retained!.rightId)!;
+
+    button('[data-screen="selection"]').click();
+    root.querySelector<HTMLInputElement>(`input[name="anime"][value="${removed}"]`)!.click();
+    button('[data-screen="comparison"]').click();
+
+    const collection = store.get('shikimori:42')!;
+    const updated = collection.session!;
+    const engine = PairwiseSorterEngine.restore(updated);
+    expect(updated.input.pending).not.toContain(removed);
+    expect(engine.getView().activeAnswers).toEqual([expect.objectContaining({
+      type: 'reuse', leftId: retained!.leftId, rightId: retained!.rightId, answer: retained!.answer,
+    })]);
+    expect(root.querySelector('[role="progressbar"]')?.getAttribute('aria-valuenow')).toBe('1');
+    expect(root.querySelector(`[data-comparison-left="${removed}"], [data-comparison-right="${removed}"]`)).toBeNull();
+    expect(parseCollectionBackup(serializeCollectionBackup(collection)).session).toEqual(updated);
+
+    await startApp();
+    button('[data-action="resume-selection"]').click();
+    expect(store.get(collection.id)!.session).toEqual(updated);
+    expect(button('[data-action="undo-comparison"]').disabled).toBe(false);
+    button('[data-action="undo-comparison"]').click();
+    expect(PairwiseSorterEngine.restore(store.get(collection.id)!.session).getView().activeAnswers).toEqual([]);
+  });
+
   it('строит реальный результат и пересматривает место, сохраняя порядок остальных и прежний журнал', async () => {
     await importAndStart();
     finishComparison();
@@ -186,6 +227,8 @@ describe('сравнение реальной коллекции', () => {
     button('[data-screen="comparison"]').click();
     expect(root.querySelector('[aria-current="step"]')!.getAttribute('data-screen')).toBe('comparison');
     expect(root.querySelector('h1')!.textContent).toBe('Сравнение завершено');
+    expect(root.querySelector('.comparison-progress-label')?.textContent).toBe('3 из 3');
+    expect(root.querySelector('[role="progressbar"]')?.getAttribute('data-progress-percent')).toBe('100%');
     expect(root.querySelector('[data-action="answer"]')).toBeNull();
     expect(document.activeElement).toBe(root.querySelector('h1'));
     const result = button('.comparison-tools [data-screen="result"]');

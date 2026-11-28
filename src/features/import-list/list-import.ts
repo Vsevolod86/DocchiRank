@@ -5,6 +5,7 @@ import { listMedia } from '../../entities/collection/model';
 import { mergeImportedList } from '../../entities/collection/reimport';
 import type { ListMetadataSource, ListSource, ImportOptions, ImportProgress } from '../../integrations/list-source';
 import { ImportError, parseProfileInput } from '../../integrations/shikimori-data';
+import type { ImportErrorCode } from '../../integrations/shikimori-data';
 import { parseShikimoriExport } from '../../integrations/shikimori-json';
 import type { CollectionStore } from '../../storage/collection-store';
 
@@ -16,7 +17,7 @@ export interface ImportStatus {
   loading: boolean;
   cancellable: boolean;
   message: string;
-  error: string | null;
+  error: Readonly<{ message: string; code?: ImportErrorCode }> | null;
 }
 
 /** Доступные в карточке способы импорта списка Shikimori. */
@@ -33,7 +34,7 @@ interface ImportCallbacks {
   currentCollection(): Collection | null;
   apply(collection: Collection, reason: 'import' | 'restore' | 'update'): void;
   save(collection: Collection): Promise<void>;
-  onChange(event: 'start' | 'finish'): void;
+  onChange(event: 'start' | 'profile-verified' | 'finish'): void;
   onProgress(message: string): void;
 }
 
@@ -82,11 +83,19 @@ export class ListImport {
     try { nickname = parseProfileInput(input); }
     catch (error) {
       if (!(error instanceof ImportError)) throw error;
-      this.state = { ...this.state, method: 'profile', profileInput: input, message: '', error: error.message };
+      this.state = { ...this.state, method: 'profile', profileInput: input, message: '', error };
       this.callbacks.onChange('finish');
       return;
     }
-    return this.importList('profile', options => this.sources.shikimori.load(nickname, { ...options, media }), nickname);
+    return this.importList('profile', options => this.sources.shikimori.load(nickname, {
+      ...options, media,
+      onProfileVerified: profile => {
+        if (options.signal !== this.controller?.signal || options.signal?.aborted) return;
+        this.state.profileInput = profile.nickname;
+        this.state.message = progressMessage({ stage: 'access', loaded: 0 });
+        this.callbacks.onChange('profile-verified');
+      },
+    }), nickname);
   }
 
   /** Читает выгрузку Shikimori и передаёт её в общий процесс импорта. */
@@ -98,14 +107,14 @@ export class ListImport {
   private async importList(method: ImportMethod, read: (options: ImportOptions) => Promise<SourceSnapshot>, input: string): Promise<void> {
     if (this.state.loading) return;
     this.state.profileInput = input;
-    const message = method === 'file' ? 'Читаю JSON-файл…' : 'Загружаю профиль…';
+    const message = method === 'file' ? 'Читаю JSON-файл…' : '';
     const options = this.start(method, message, method !== 'file');
     try {
       await this.applyImportedList(await read(options));
     } catch (error) {
       this.state.message = '';
       if (error instanceof ImportError && error.code === 'cancelled') this.state.message = error.message;
-      else this.state.error = error instanceof Error ? error.message : 'Не удалось загрузить список. Попробуй ещё раз.';
+      else this.state.error = error instanceof Error ? error : { message: 'Не удалось загрузить список. Попробуй ещё раз.' };
       return;
     } finally {
       this.finish();
@@ -143,13 +152,13 @@ export class ListImport {
       if (result.error instanceof ImportError && result.error.code === 'cancelled') {
         this.state.message += ' Подгрузка отменена; список и полученные сведения сохранены.';
       } else if (result.error) {
-        this.state.error = `Подгрузка завершена не полностью. ${result.error.message} Чтобы повторить её, импортируй тот же JSON.`;
+        this.state.error = { message: `Подгрузка завершена не полностью. ${result.error.message} Чтобы повторить её, импортируй тот же JSON.` };
       } else if (result.matched < current.animes.length) {
         this.state.message += ` Для ${current.animes.length - result.matched} произведений Shikimori не вернул сведения; они остались в наборе.`;
       }
     } catch {
       this.state.message = '';
-      this.state.error = 'Не удалось подгрузить сведения о тайтлах. Чтобы повторить подгрузку, импортируй тот же JSON.';
+      this.state.error = { message: 'Не удалось подгрузить сведения о тайтлах. Чтобы повторить подгрузку, импортируй тот же JSON.' };
     } finally {
       this.finish();
     }
@@ -180,7 +189,7 @@ export class ListImport {
 /** Переводит стадии интеграции в короткие сообщения, полезные при ожидании. */
 function progressMessage(progress: ImportProgress): string {
   switch (progress.stage) {
-    case 'profile': return 'Загружаю профиль…';
+    case 'profile': return ''; // Проверка уже обозначена на кнопке импорта.
     case 'access': return 'Проверяю доступ к списку…';
     case 'entries': return `Загружаю список. Получено записей: ${progress.loaded}.`;
     case 'metadata': return `Подгружаю данные тайтлов. Обработано: ${progress.loaded} из ${progress.total ?? progress.loaded}.`;

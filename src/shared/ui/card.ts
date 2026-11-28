@@ -18,5 +18,9 @@ export function renderCard({ tag = 'section', padded = true, className, attribut
 
 /** Не активирует связанный флажок или переключатель при выделении названия. */
 export function preventLabelActivationOnCardTitle(event: MouseEvent): void {
-  if (event.target instanceof Element && event.target.closest('label .card-title')) event.preventDefault();
+  if (!(event.target instanceof Element)) return;
+  const title = event.target.closest('label .card-title');
+  if (!title) return;
+  const style = title.ownerDocument.defaultView?.getComputedStyle(title);
+  if (style?.userSelect !== 'none' && style?.webkitUserSelect !== 'none') event.preventDefault();
 }

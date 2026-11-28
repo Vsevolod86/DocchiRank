@@ -33,7 +33,7 @@ afterEach(() => {
 });
 
 describe('карточки импорта и восстановление выбора', () => {
-  it('сразу открывает набор и показывает прогресс, применяя данные только после полной загрузки', async () => {
+  it('остаётся на импорте до проверки ника, затем показывает прогресс загрузки набора', async () => {
     selectImportMethod('profile');
     let complete!: (snapshot: SourceSnapshot) => void;
     let progress: Parameters<ListMetadataSource['load']>[1];
@@ -43,6 +43,19 @@ describe('карточки импорта и восстановление выб
     });
     root.querySelector<HTMLInputElement>('#profile-input')!.value = 'https://shikimori.io/public-user/?section=stats#profile';
     root.querySelector<HTMLFormElement>('#profile-form')!.requestSubmit();
+    expect(root.querySelector('[aria-current="step"]')!.getAttribute('data-screen')).toBe('import');
+    const status = root.querySelector<HTMLElement>('#profile-form [role="status"]')!;
+    expect(status.hidden).toBe(true);
+    expect(root.querySelector('[data-action="cancel-import"]')).toBeNull();
+    expect(button('[data-screen="selection"]').disabled).toBe(true);
+    const submit = button('#profile-form [type="submit"]');
+    expect(submit.disabled).toBe(true);
+    expect(submit.textContent).toBe('Проверяю ник…');
+    progress!.onProgress!({ stage: 'waiting', loaded: 0, waitSeconds: 2 });
+    expect(status.hidden).toBe(false);
+    progress!.onProgress!({ stage: 'profile', loaded: 0 });
+    expect(status.hidden).toBe(true);
+    progress!.onProfileVerified!(profileSnapshot().profile);
     expect(root.querySelector('[aria-current="step"]')!.getAttribute('data-screen')).toBe('selection');
     expect(root.querySelectorAll('.import-card')).toHaveLength(0);
     expect(root.querySelector('h1')!.textContent).toBe('Готовим список аниме');
@@ -55,10 +68,36 @@ describe('карточки импорта и восстановление выб
     expect(root.querySelector('#import-status')!.textContent).toContain('50');
     complete(profileSnapshot());
     await vi.waitFor(() => { expect(root.querySelector('[data-action="cancel-import"]')).toBeNull(); });
-    expect(root.querySelectorAll('.anime-choice')).toHaveLength(6);
+    expect(root.querySelectorAll('.anime-choice')).toHaveLength(5);
     expect(store.get('shikimori:42')!.entries).toHaveLength(6);
     expect(store.get('shikimori:42')!.animes[0]!.coverUrl).toContain('/covers/5114.jpg');
     expect(source.enrich).not.toHaveBeenCalled();
+  });
+
+  it('показывает отсутствие профиля в диалоге и после закрытия возвращает фокус к нику', async () => {
+    vi.mocked(source.load).mockRejectedValueOnce(new ImportError('not-found', 'Профиль не найден или недоступен.\nПроверь ник.'));
+    root.querySelector<HTMLInputElement>('#profile-input')!.value = 'missing';
+    root.querySelector<HTMLFormElement>('#profile-form')!.requestSubmit();
+
+    const dialogSelector = '.profile-not-found-dialog';
+    await vi.waitFor(() => expect(document.querySelector(`${dialogSelector}[open] p`)?.innerHTML)
+      .toBe('Профиль не найден или недоступен.<br>Проверь ник.'));
+    expect(root.querySelector('#profile-form [role="alert"]')).toBeNull();
+    expect(root.querySelector('[aria-current="step"]')!.getAttribute('data-screen')).toBe('import');
+    expect(button('[data-screen="selection"]').disabled).toBe(true);
+    expect(button('#profile-form [type="submit"]').disabled).toBe(false);
+    expect(selections.get()).toBeNull();
+
+    document.querySelector<HTMLButtonElement>(`${dialogSelector} button`)!.click();
+    await vi.waitFor(() => expect(document.querySelector(dialogSelector)).toBeNull());
+    const field = root.querySelector<HTMLInputElement>('#profile-input')!;
+    expect(document.activeElement).toBe(field);
+    expect(field.value).toBe('missing');
+
+    field.value = 'public-user';
+    root.querySelector<HTMLFormElement>('#profile-form')!.requestSubmit();
+    await vi.waitFor(() => expect(root.querySelector('[aria-current="step"]')?.getAttribute('data-screen')).toBe('selection'));
+    expect(document.querySelector(dialogSelector)).toBeNull();
   });
 
   it.each([
@@ -77,13 +116,18 @@ describe('карточки импорта и восстановление выб
     expect(store.get(collectionId)!.entries[0]).toMatchObject({ animeId: '5114', originalScore: 9 });
     expect(store.get(collectionId)!.animes[0]!.url).toBe(`https://shikimori.io/${catalog}/5114`);
     expect(selections.get()).toEqual({ collectionId });
+    expect(root.querySelectorAll('.anime-choice')).toHaveLength(targetType === 'Anime' ? 0 : 1);
+    button('[data-action="reset-filters"]').click();
     expect(root.querySelectorAll('.anime-choice')).toHaveLength(1);
     expect(source.load).not.toHaveBeenCalled();
   });
 
   it('после отказа оставляет ошибку на этапе набора и повторяет загрузку без возврата к форме', async () => {
     selectImportMethod('profile');
-    vi.mocked(source.load).mockRejectedValue(new Error('Список закрыт'));
+    vi.mocked(source.load).mockImplementation(async (_input, options) => {
+      options?.onProfileVerified?.(profileSnapshot().profile);
+      throw new Error('Список закрыт');
+    });
     root.querySelector<HTMLInputElement>('#profile-input')!.value = 'public-user';
     root.querySelector<HTMLFormElement>('#profile-form')!.requestSubmit();
     await vi.waitFor(() => { expect(root.querySelector('[data-action="retry-list-import"]')).not.toBeNull(); });
@@ -92,7 +136,7 @@ describe('карточки импорта и восстановление выб
     expect(selections.get()).toBeNull();
     vi.mocked(source.load).mockResolvedValue(profileSnapshot());
     button('[data-action="retry-list-import"]').click();
-    await vi.waitFor(() => { expect(root.querySelectorAll('.anime-choice')).toHaveLength(6); });
+    await vi.waitFor(() => { expect(root.querySelectorAll('.anime-choice')).toHaveLength(5); });
     expect(source.load).toHaveBeenLastCalledWith('public-user', expect.objectContaining({ signal: expect.any(AbortSignal) }));
   });
 
@@ -106,13 +150,14 @@ describe('карточки импорта и восстановление выб
     button('[data-screen="import"]').click();
     selectImportMethod('profile');
     vi.mocked(source.load).mockImplementation((_input, options) => new Promise((_resolve, reject) => {
+      options?.onProfileVerified?.({ ...snapshot.profile, nickname: 'other-user' });
       options!.signal!.addEventListener('abort', () => reject(new ImportError('cancelled', 'Загрузка отменена.')), { once: true });
     }));
     root.querySelector<HTMLInputElement>('#profile-input')!.value = 'other-user';
     root.querySelector<HTMLFormElement>('#profile-form')!.requestSubmit();
     expect(root.querySelectorAll('.anime-choice')).toHaveLength(0);
     button('[data-action="cancel-import"]').click();
-    await vi.waitFor(() => { expect(root.querySelectorAll('.anime-choice')).toHaveLength(6); });
+    await vi.waitFor(() => { expect(root.querySelectorAll('.anime-choice')).toHaveLength(5); });
     expect(root.querySelector('.collection-owner')!.textContent).toBe('public-user');
     expect(store.get('shikimori:42')!.selectedIds).toEqual(['5114']);
     expect(selections.get()).toEqual(saved);
@@ -136,7 +181,7 @@ describe('карточки импорта и восстановление выб
     selectImportMethod('profile');
     root.querySelector<HTMLInputElement>('#profile-input')!.value = 'public-user';
     root.querySelector<HTMLFormElement>('#profile-form')!.requestSubmit();
-    await vi.waitFor(() => { expect(root.querySelectorAll('.anime-choice')).toHaveLength(6); });
+    await vi.waitFor(() => { expect(root.querySelectorAll('.anime-choice')).toHaveLength(5); });
     root.querySelector<HTMLElement>('[data-anime="5114"]')!.click();
     await vi.waitFor(() => expect(store.get('shikimori:42')!.selectedIds).toEqual(['5114']));
     const saved = selections.get();
@@ -170,6 +215,7 @@ describe('карточки импорта и восстановление выб
     const demo = store.get('demo')!;
     expect(demo.animes.map(anime => anime.id)).toEqual(['9253', '5114', '32281', '199', '16498', '20583', '2167', '2001', '20']);
     expect(demo.animes.every(anime => anime.coverUrl && anime.communityScore !== null)).toBe(true);
+    expect(demo.entries.every(entry => entry.status === 'completed')).toBe(true);
     button('[data-action="select-all"]').click();
     expect(selections.get()).toEqual(saved);
 
@@ -177,7 +223,10 @@ describe('карточки импорта и восстановление выб
     manga.media = 'manga';
     manga.animes = [{ ...manga.animes[0]!, name: 'Novel', russian: 'Ранобэ', kind: 'light_novel', url: 'https://shikimori.io/ranobe/5114' }];
     manga.entries = [{ ...manga.entries[0]!, status: 'watching' }];
-    vi.mocked(source.load).mockResolvedValue(manga);
+    vi.mocked(source.load).mockImplementation(async (_input, options) => {
+      options?.onProfileVerified?.(manga.profile);
+      return manga;
+    });
     button('[data-screen="import"]').click();
     const media = root.querySelector<HTMLSelectElement>('#import-media')!;
     media.value = 'manga';

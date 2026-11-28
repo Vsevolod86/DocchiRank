@@ -22,7 +22,7 @@ export interface EngineOptions { strategy?: Strategy | 'auto'; gallopThreshold?:
 export interface SortingEvent {
   id: string;
   sequence: number;
-  type: 'answer' | 'undo' | 'revise';
+  type: 'answer' | 'reuse' | 'undo' | 'revise';
   leftId: string | null;
   rightId: string | null;
   answer: Answer | null;

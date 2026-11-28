@@ -2,14 +2,15 @@ import { statusLabels } from '../../entities/anime/anime-card';
 import type { AnimeDisplayFields } from '../../entities/anime/anime-card';
 import { LIST_STATUSES } from '../../entities/collection/model';
 import type { ListMedia } from '../../entities/collection/model';
-import { kindFilters, SCORE_FILTERS } from '../../features/selection/filters';
-import type { DisplayFilters, FilterGroup, FilterMode, KindFilter } from '../../features/selection/filters';
+import { kindFilters } from '../../features/selection/filters';
+import type { BinaryFilterGroup, DisplayFilters, FilterMode, KindFilter } from '../../features/selection/filters';
 import { LIST_SORTS } from '../../features/selection/list-order';
 import type { ListSort } from '../../features/selection/list-order';
 import { renderButton } from '../../shared/ui/button';
 import { renderInput } from '../../shared/ui/input';
 import { panelGroupToggle } from '../panel-group-toggle';
 import type { PanelGroup } from '../panel-group-toggle';
+import { scoreFilter } from './score-filter';
 import { selectionFilterToggle } from './selection-filter';
 
 const KIND_LABELS: Record<KindFilter, string> = {
@@ -62,7 +63,7 @@ function filterControls(state: SettingsOptions, media: ListMedia): string {
     <div class="selection-filter">${selectionFilterToggle(state.filters.selection, state.loading)}</div>
     ${filterGroup('status', 'Статус', LIST_STATUSES.map(value => [value, statuses[value]]), state)}
     ${filterGroup('kind', 'Тип произведения', kindFilters(media).map(value => [value, KIND_LABELS[value]]), state)}
-    ${filterGroup('score', 'Моя оценка', SCORE_FILTERS.map(value => [value, value === 'unrated' ? 'Без оценки' : value]), state)}
+    ${scoreFilter(state.filters.score, state.collapsedGroups.score, state.loading)}
     </div></section>`;
 }
 
@@ -81,7 +82,7 @@ function listSortControls(state: SettingsOptions): string {
 }
 
 /** Показывает сворачиваемую группу бинарных условий, сохраняя их значения. */
-function filterGroup(group: 'status' | 'score' | 'kind', label: string, options: [string, string][], state: SettingsOptions): string {
+function filterGroup(group: BinaryFilterGroup, label: string, options: [string, string][], state: SettingsOptions): string {
     const conditions: Record<string, boolean> = state.filters[group];
     const active = options.some(([value]) => conditions[value]);
     const allActive = options.every(([value]) => conditions[value]);
@@ -95,13 +96,13 @@ function filterGroup(group: 'status' | 'score' | 'kind', label: string, options:
             title: allActive ? 'Выключить все флаги группы' : 'Включить все флаги группы',
         },
       })}</div>
-    <div id="panel-${group}-options" class="filter-options ${group === 'score' ? 'score-options' : ''}" ${state.collapsedGroups[group] ? 'hidden' : ''}>${options.map(([value, caption]) =>
+    <div id="panel-${group}-options" class="filter-options" ${state.collapsedGroups[group] ? 'hidden' : ''}>${options.map(([value, caption]) =>
         filterOption(group, value, caption, `${label}: ${caption}`, !active ? 'neutral' : conditions[value] ? 'include' : 'exclude', state.loading)).join('')}</div>
   </section>`;
 }
 
 /** Различает выключенную группу и активные бинарные условия. */
-function filterOption(group: Exclude<FilterGroup, 'selection'>, value: string, caption: string, label: string, mode: FilterMode, disabled: boolean): string {
+function filterOption(group: BinaryFilterGroup, value: string, caption: string, label: string, mode: FilterMode, disabled: boolean): string {
     const current = mode === 'include' ? 'включено' : mode === 'exclude' ? 'не выбрано' : 'группа без ограничения';
     const next = mode === 'include' ? 'выключить' : 'включить';
     const description = `${label} — ${current}. Нажми, чтобы ${next}.`;

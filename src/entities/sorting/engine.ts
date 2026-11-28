@@ -1,11 +1,11 @@
-import { estimateComparisons, normalizeSessionInput } from './contracts';
+import { estimateComparisons, forecastComparisons, normalizeSessionInput, priorOrder } from './contracts';
 import { insertion, naturalMerge } from './algorithms';
 import type { SortProgram } from './algorithms';
 import { activeActions, effectiveAnswers, isRelation } from './journal';
 import { RelationConflict, Relations } from './relations';
 import type { Relation } from './relations';
 import { storedSortingSession } from './session';
-import type { AlgorithmPosition, Answer, CurrentPair, EngineInput, EngineOptions, EngineView, MutationResult, SessionInput, SortingEvent, SortingSession, StoredSortingSession, Strategy } from './session';
+import type { AlgorithmPosition, Answer, CurrentPair, EngineInput, EngineOptions, EngineView, Item, MutationResult, SessionInput, SortingEvent, SortingSession, StoredSortingSession, Strategy } from './session';
 
 /** Независимый интерактивный сортировщик с доказуемыми отношениями и полным журналом действий. */
 export class PairwiseSorterEngine {
@@ -55,7 +55,10 @@ export class PairwiseSorterEngine {
       throw new Error('Неизвестная версия сессии.');
     }
     const engine = new PairwiseSorterEngine(session.input, { ...session.options, sessionId: session.sessionId });
-    for (const event of session.history) {
+    const firstAction = session.history.findIndex(event => event?.type !== 'reuse');
+    const reusedCount = firstAction === -1 ? session.history.length : firstAction;
+    engine.loadReusedAnswers(session.history.slice(0, reusedCount));
+    for (const event of session.history.slice(reusedCount)) {
       if (!event || typeof event !== 'object' || !Array.isArray(event.affectedIds)) throw new Error('Некорректное событие журнала.');
       let result: MutationResult;
       if (event.type === 'answer') result = engine.answer(event.answer as Answer);
@@ -76,6 +79,19 @@ export class PairwiseSorterEngine {
     const cached = typeof sessionId === 'string' ? this.validatedStates.get(sessionId) : undefined;
     if (cached && (same(cached, value) || same(storedSortingSession(cached), value))) return copySession(cached);
     return this.restore(value).getState();
+  }
+
+  /** Пересчитывает очередь, сохраняя действующие прямые ответы по оставшимся парам. */
+  withPending(pending: readonly Item[]): PairwiseSorterEngine {
+    const engine = new PairwiseSorterEngine({
+      known: this.input.known,
+      pending: pending.map(item => item.id),
+      queue: priorOrder(pending).map(item => item.id),
+    }, this.options);
+    const ids = new Set(engine.ids);
+    engine.loadReusedAnswers(this.answers.filter(event =>
+      isRelation(event.answer) && ids.has(event.leftId!) && ids.has(event.rightId!)));
+    return engine;
   }
 
   /** Возвращает изолированный JSON-снимок, включая остановленный поиск и текущую пару. */
@@ -100,19 +116,27 @@ export class PairwiseSorterEngine {
   getView(): EngineView {
     const orderedGroups = structuredClone(this.ordered);
     const placed = new Set(orderedGroups.flat());
-    const comparisonCount = this.answers.filter(event => isRelation(event.answer)).length;
     const status = this.current ? 'comparing' : 'complete';
-    const initial = estimateComparisons(this.input.known.length, this.input.pending.length)[this.options.strategy];
-    const remainingEstimate = status === 'complete' ? 0 : Math.max(1, initial - comparisonCount);
+    const { strategy } = this.options;
+    const knownGroups = this.input.known.length, pending = this.input.pending.length;
+    const comparisonUpperBound = estimateComparisons(knownGroups, pending)[strategy];
+    const directComparisonCount = this.directPairs.size;
+    const inferredComparisonCount = this.inferredComparisonCount();
+    const forecast = Math.min(comparisonUpperBound, forecastComparisons(knownGroups, pending, strategy));
+    const unansweredPairs = this.comparisonTotal - directComparisonCount - inferredComparisonCount;
+    // Сохраняем небольшой запас, если сессия подходит к прогнозу, но вопросы ещё есть.
+    const reserve = Math.max(1, Math.ceil(directComparisonCount / 20));
+    const remainingEstimate = status === 'complete' ? 0 :
+      Math.min(unansweredPairs, Math.max(reserve, forecast - directComparisonCount));
+    const estimatedTotal = directComparisonCount + remainingEstimate;
     return {
       current: structuredClone(this.current), orderedGroups,
       pendingIds: this.ids.filter(id => !placed.has(id)),
-      comparisonCount: this.history.filter(event => event.type === 'revise' || event.type === 'answer' && isRelation(event.answer)).length,
-      directComparisonCount: this.directPairs.size, comparisonTotal: this.comparisonTotal,
-      comparisonUpperBound: initial, inferredComparisonCount: this.inferredComparisonCount(),
+      comparisonCount: this.history.filter(event => event.type === 'revise' || (event.type === 'answer' || event.type === 'reuse') && isRelation(event.answer)).length,
+      directComparisonCount, comparisonTotal: this.comparisonTotal, comparisonUpperBound, inferredComparisonCount,
       canSkip: this.hasAlternative(),
-      status, strategy: this.options.strategy, canUndo: this.active.length > 0,
-      remainingEstimate, progressPercent: status === 'complete' ? 100 : Math.min(99, Math.round(100 * comparisonCount / (comparisonCount + remainingEstimate))),
+      status, strategy, canUndo: this.active.length > 0,
+      remainingEstimate, progressPercent: status === 'complete' ? 100 : Math.min(99, Math.round(100 * directComparisonCount / estimatedTotal)),
       activeAnswers: copyEvents(this.answers),
     };
   }
@@ -158,6 +182,25 @@ export class PairwiseSorterEngine {
     }
   }
 
+  /** Загружает перенесённые ответы перед новыми вопросами, проверяя допустимость каждой пары. */
+  private loadReusedAnswers(answers: readonly SortingEvent[]): void {
+    if (answers.length === 0) return;
+    const ids = new Set(this.ids);
+    const pending = new Set(this.input.pending);
+    const pairs = new Set<string>();
+    for (const { leftId, rightId, answer } of answers) {
+      if (!leftId || !rightId || leftId === rightId || !ids.has(leftId) || !ids.has(rightId)
+        || !pending.has(leftId) && !pending.has(rightId) || !isRelation(answer)) {
+        throw new Error('Недопустимый перенесённый ответ.');
+      }
+      const pair = pairKey(leftId, rightId);
+      if (pairs.has(pair)) throw new Error('Повторная пара в перенесённых ответах.');
+      pairs.add(pair);
+      this.history.push(this.event('reuse', { leftId, rightId, answer }));
+    }
+    this.restart(this.history);
+  }
+
   /** Создаёт последовательный ID без зависимости от настенных часов. */
   private event(type: SortingEvent['type'], fields: Partial<SortingEvent> = {}): SortingEvent {
     const sequence = this.history.length + 1;
@@ -176,8 +219,10 @@ export class PairwiseSorterEngine {
   /** Перезапускает поиск по действующим отношениям после отмены или пересмотра. */
   private rebuild(): void {
     const actions = activeActions(this.history);
-    this.restart([]);
-    for (let index = 0; index < actions.length; index++) {
+    const firstAction = actions.findIndex(event => event.type !== 'reuse');
+    const reusedCount = firstAction === -1 ? actions.length : firstAction;
+    this.restart(actions.slice(0, reusedCount));
+    for (let index = reusedCount; index < actions.length; index++) {
       const event = actions[index]!;
       if (event.type === 'answer' && (isRelation(event.answer) || event.answer === 'skip')) {
         if (this.current?.leftId !== event.leftId || this.current?.rightId !== event.rightId) {

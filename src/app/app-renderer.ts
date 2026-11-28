@@ -13,6 +13,9 @@ export class AppRenderer {
     private readonly content: HTMLElement;
     private readonly panel: HTMLElement;
     private readonly panelHandleZone: HTMLElement;
+    private readonly mobileSettings: HTMLButtonElement;
+    private readonly settingsDialog: HTMLDialogElement;
+    private readonly settingsTitle: HTMLElement;
     private readonly footer: HTMLElement;
     private readonly saveError: HTMLElement;
     private readonly exportButton: HTMLButtonElement;
@@ -32,11 +35,19 @@ export class AppRenderer {
           <a class="brand" href="#" data-screen="import" aria-label="DocchiRank — начало">
             <img class="brand-mark" src="${import.meta.env.BASE_URL}docchirank.svg" width="26" height="26" alt="">DocchiRank
           </a>
+          <div class="sidebar-actions">
           ${renderButton({
             label: 'Тёмная тема', variant: 'icon', className: 'theme-toggle',
             attributes: { title: 'Тёмная тема' },
             iconPaths: '<path class="theme-moon" d="M20.5 14.5A8.5 8.5 0 0 1 9.5 3.5a8.5 8.5 0 1 0 11 11Z"/><g class="theme-sun"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/></g>',
         })}
+          ${renderButton({
+            label: 'Настройки', variant: 'icon', className: 'mobile-settings-toggle', hidden: true,
+            attributes: { title: 'Настройки', 'data-action': 'open-settings',
+                'aria-haspopup': 'dialog', 'aria-expanded': 'false', 'aria-controls': 'mobile-settings-dialog' },
+            iconPaths: '<path d="M4 7h5m4 0h7M4 17h9m4 0h3"/><circle cx="11" cy="7" r="2"/><circle cx="15" cy="17" r="2"/>',
+          })}
+          </div>
         </div>
         <nav aria-label="Экраны приложения"></nav>
         <span class="sidebar-footer">© ${new Date().getFullYear()} DocchiRank.</span>
@@ -51,6 +62,15 @@ export class AppRenderer {
       </div>
       ${sidebarHandle('navigation', 'app-navigation-panel', 'меню')}
       ${sidebarHandle('settings', 'app-settings-panel', 'боковую панель', true)}
+      <dialog class="settings-dialog" id="mobile-settings-dialog" aria-labelledby="mobile-settings-heading">
+        <header class="settings-dialog-heading">
+          <h2 id="mobile-settings-heading">Настройки</h2>
+          ${renderButton({
+            label: 'Закрыть настройки', variant: 'icon', attributes: { 'data-close-settings': 'true' },
+            iconPaths: '<path d="m6 6 12 12M18 6 6 18"/>',
+          })}
+        </header>
+      </dialog>
     </div>`;
         this.shell = root.querySelector('.app-shell')!;
         this.navigation = root.querySelector('nav')!;
@@ -61,14 +81,38 @@ export class AppRenderer {
         this.panel = root.ownerDocument.createElement('aside');
         this.panel.id = 'app-settings-panel';
         this.panelHandleZone = root.querySelector('.sidebar-handle-zone--settings')!;
+        this.mobileSettings = root.querySelector('.mobile-settings-toggle')!;
+        this.settingsDialog = root.querySelector('.settings-dialog')!;
+        this.settingsTitle = root.querySelector('#mobile-settings-heading')!;
+        this.settingsDialog.addEventListener('click', event => {
+            if (event.target === this.settingsDialog
+                || event.target instanceof Element && event.target.closest('[data-close-settings]')) this.settingsDialog.close();
+        });
+        this.settingsDialog.addEventListener('close', () => {
+            if (this.settingsDialog.open) return;
+            this.mobileSettings.setAttribute('aria-expanded', 'false');
+            if (this.panel.parentElement === this.settingsDialog) this.shell.append(this.panel);
+            if (this.previous?.screen === 'comparison' && this.root.ownerDocument.activeElement === this.mobileSettings) {
+                this.content.querySelector<HTMLElement>('h1')?.focus({ preventScroll: true });
+            }
+        });
         bindThemeToggle(root.querySelector('.theme-toggle')!);
         this.bindSidebarHandle(root.querySelector('.sidebar-handle--navigation')!, root.querySelector('.sidebar')!, 'navigation', 'меню');
         this.bindSidebarHandle(root.querySelector('.sidebar-handle--settings')!, this.panel, 'settings', 'боковую панель');
     }
 
+    /** Помещает текущую боковую панель в модальное окно, сохраняя её элементы. */
+    showSettings(): void {
+        if (this.mobileSettings.hidden || this.settingsDialog.open) return;
+        this.settingsDialog.append(this.panel);
+        this.settingsDialog.showModal();
+        this.mobileSettings.setAttribute('aria-expanded', 'true');
+    }
+
     /** Сверяет подготовленные участки, сохраняя раскрытую историю и прокрутку той же панели. */
     render(view: AppView, focusHeading: boolean): void {
         const previous = this.previous;
+        if (this.settingsDialog.open && (!view.panel || previous?.screen !== view.screen || focusHeading)) this.settingsDialog.close();
         const active = this.root.ownerDocument.activeElement;
         const focused = active instanceof HTMLElement && this.root.contains(active) ? active : null;
         const panelScroll = this.panel.scrollTop;
@@ -128,15 +172,18 @@ export class AppRenderer {
     private updatePanel(view: SidePanelView | null, sameCollection: boolean): void {
         this.shell.classList.toggle('has-filters', view !== null);
         this.panelHandleZone.hidden = view === null;
+        this.mobileSettings.hidden = view === null;
         if (!view) {
             this.panel.remove();
             this.panel.replaceChildren();
             this.sections.clear();
             return;
         }
-        if (this.panel.parentElement !== this.shell) this.shell.append(this.panel);
+        const container = this.settingsDialog.open ? this.settingsDialog : this.shell;
+        if (this.panel.parentElement !== container) container.append(this.panel);
         this.panel.className = view.className;
         this.panel.setAttribute('aria-label', view.label);
+        this.settingsTitle.textContent = view.label;
         for (const [key, section] of this.sections) {
             if (!(key in view.sections)) {
                 section.element.remove();

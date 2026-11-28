@@ -71,6 +71,7 @@ function validateCollection(value: unknown, stored = false): Collection {
   const archivedSessions = data.archivedSessions?.map(value => readSession(value, listed, stored));
   const sessionIds = [...(session ? [session] : []), ...(archivedSessions ?? [])].map(value => value.sessionId);
   if (new Set(sessionIds).size !== sessionIds.length) throw new Error('Сессии коллекции содержат повторные идентификаторы.');
+  const comparisonSelection = data.comparisonSelection === undefined ? undefined : readComparisonSelection(data.comparisonSelection, listed);
   const ratings = readRatings(data.ratings, listed);
   const ratingTransition = data.ratingTransition === undefined ? undefined : readRatingTransition(data.ratingTransition, listed);
   if (!ratingTransition && session && session.progress.pendingIds.length === 0) {
@@ -78,6 +79,7 @@ function validateCollection(value: unknown, stored = false): Collection {
   }
   return {
     ...collection, name: data.name, orderedIds: [...orderedIds], session, ratings,
+    ...(comparisonSelection ? { comparisonSelection } : {}),
     ...(archivedSessions ? { archivedSessions } : {}),
     ...(ratingTransition ? { ratingTransition } : {}),
   };
@@ -92,6 +94,15 @@ function readSession(value: unknown, listed: Set<string>, stored: boolean): Sort
   const ids = [...session.input.known.flat(), ...session.input.pending];
   if (ids.some(id => !listed.has(id))) throw new Error('Сессия ссылается на отсутствующее произведение.');
   return session;
+}
+
+/** Проверяет отметки, с которыми началось или было продолжено сравнение. */
+function readComparisonSelection(value: NonNullable<Collection['comparisonSelection']>, listed: Set<string>): NonNullable<Collection['comparisonSelection']> {
+  if (!value || !Array.isArray(value.ids) || !validIds(value.ids, listed)
+    || value.scenario !== undefined && !['new', 'add', 'review'].includes(value.scenario)) {
+    throw new Error('Неверный снимок набора для сравнения.');
+  }
+  return { ids: [...value.ids], ...(value.scenario ? { scenario: value.scenario } : {}) };
 }
 
 /** Проверяет уникальную последовательность ссылок на произведения списка. */

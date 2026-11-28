@@ -1,4 +1,4 @@
-import { beginComparison } from '../../entities/collection/comparison';
+import { beginComparison, comparisonSelection, updateComparisonSelection } from '../../entities/collection/comparison';
 import type { Collection, Score } from '../../entities/collection/model';
 import { presetRatingCutoffs, ratingAssignments, reconcileRatings, scaleFromCutoffs, scaleToCutoffs, setGroupRating } from '../../entities/collection/ratings';
 import type { RatingCutoffs } from '../../entities/collection/ratings';
@@ -75,14 +75,27 @@ export class CollectionCommands {
   startComparison(scenario: Parameters<typeof beginComparison>[1], reviewId?: string): boolean {
     if (!this.active) return false;
     try {
-      this.replaceCollection(beginComparison(this.active, reviewId ? 'review' : scenario, reviewId ? [reviewId] : this.active.selectedIds));
-      this.clearRevision();
-      this.state.ratingEditor.error = null;
-      this.state.ratingEditor.method = 'manual';
-      this.settleRatings();
+      const updated = !reviewId && comparisonSelection(this.active).scenario === scenario
+        ? updateComparisonSelection(this.active) : this.active;
+      this.applyComparison(updated !== this.active ? updated : beginComparison(
+        this.active, reviewId ? 'review' : scenario, reviewId ? [reviewId] : this.active.selectedIds));
       return true;
     } catch (error) {
       this.state.comparisonError = error instanceof Error ? error.message : 'Не удалось начать сравнение.';
+      return false;
+    }
+  }
+
+  /** Применяет изменённый набор при продолжении, возвращая null, если применять нечего. */
+  resumeComparison(): boolean | null {
+    if (!this.active) return null;
+    try {
+      const updated = updateComparisonSelection(this.active);
+      if (updated === this.active) return null;
+      this.applyComparison(updated);
+      return true;
+    } catch (error) {
+      this.state.comparisonError = error instanceof Error ? error.message : 'Не удалось применить набор.';
       return false;
     }
   }
@@ -186,6 +199,15 @@ export class CollectionCommands {
       this.state.ratingEditor.error = error instanceof Error ? error.message : 'Не удалось изменить распределение.';
       return false;
     }
+  }
+
+  /** Открывает изменённое сравнение и согласовывает оценки с новым порядком. */
+  private applyComparison(collection: Collection): void {
+    this.replaceCollection(collection);
+    this.clearRevision();
+    this.state.ratingEditor.error = null;
+    this.state.ratingEditor.method = 'manual';
+    this.settleRatings();
   }
 
   /** Применяет результат команды движка вместе с согласованным порядком и оценками. */

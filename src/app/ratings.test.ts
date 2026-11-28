@@ -50,6 +50,7 @@ afterEach(() => {
 
 describe('границы оценок результата', () => {
   it('показывает добавляемые тайтлы, уведомляет перед скачиванием и открывает ссылку на импорт', async () => {
+    localStorage.removeItem('docchirank.shikimori-download-notice-seen');
     const download = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
     const createUrl = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:shikimori-export');
     const row = { target_id: Number(ids[0]), target_type: 'Anime', target_title: 'Аниме', score: 0,
@@ -88,6 +89,7 @@ describe('границы оценок результата', () => {
     expect(download).not.toHaveBeenCalled();
     expect(importLink.hidden).toBe(true);
     expect(notice.hidden).toBe(true);
+    const random = vi.spyOn(Math, 'random').mockReturnValue(0.2);
     vi.useFakeTimers();
     downloadButton.click();
     form.requestSubmit();
@@ -114,6 +116,11 @@ describe('границы оценок результата', () => {
     expect(importLink.href).toBe('https://shikimori.io/Ratings.User/list_imports/new');
     expect(Array.from(dialog.querySelectorAll('[aria-current="step"]'))).toEqual([steps[3]]);
     expect(Array.from(dialog.querySelectorAll('[data-complete]'))).toEqual([steps[0], steps[1], steps[2]]);
+    expect(localStorage.getItem('docchirank.shikimori-download-notice-seen')).toBe('1');
+
+    downloadButton.click();
+    expect(notice.hidden).toBe(true);
+    expect(download).toHaveBeenCalledTimes(2);
 
     const nickname = dialog.querySelector<HTMLInputElement>('#shikimori-export-nickname')!;
     nickname.value = '';
@@ -122,11 +129,12 @@ describe('границы оценок результата', () => {
     expect(Array.from(dialog.querySelectorAll('[data-complete]'))).toEqual([steps[1], steps[2]]);
     expect(importLink.hidden).toBe(true);
 
+    random.mockReturnValue(0.199);
     downloadButton.click();
     expect(notice.hidden).toBe(false);
     dialog.querySelector<HTMLButtonElement>('[data-close-export]')!.click();
     await vi.runOnlyPendingTimersAsync();
-    expect(download).toHaveBeenCalledOnce();
+    expect(download).toHaveBeenCalledTimes(2);
   });
 
   it('скрывает ссылки при смене ника и не создаёт их для отсутствующего профиля', async () => {

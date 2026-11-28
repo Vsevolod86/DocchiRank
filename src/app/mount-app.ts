@@ -5,13 +5,15 @@ import { CollectionCommands } from '../features/collection/collection-commands';
 import { canExportShikimori, resultViewData } from '../features/collection/result-view-data';
 import { ListImport } from '../features/import-list/list-import';
 import type { ImportSources } from '../features/import-list/list-import';
-import { createDisplayFilters, cycleDisplayFilter, toggleFilterGroup } from '../features/selection/filters';
+import { createDisplayFilters, cycleDisplayFilter, initialDisplayFilters, toggleFilterGroup, withScoreBound } from '../features/selection/filters';
 import { selectAnime, selectionDetails, toggleVisibleSelection } from '../features/selection/selection';
 import { SelectionPersistence } from '../features/selection/selection-persistence';
 import { downloadJson } from '../shared/lib/download-json';
 import { preventLabelActivationOnCardTitle } from '../shared/ui/card';
+import { showMissingProfileDialog } from '../widgets/import/import-view';
 import { highlightResultLinks } from '../widgets/result/result-table';
 import { openShikimoriExportDialog } from '../widgets/result/shikimori-export-dialog';
+import { previewScoreRange, scoreAtPosition, scoreInputBound } from '../widgets/settings/score-filter';
 import { normalizeShikimoriProfilePaste } from '../widgets/shikimori/profile-field';
 import type { CollectionStore } from '../storage/collection-store';
 import type { SelectionStore } from '../storage/selection-store';
@@ -32,7 +34,8 @@ export function mountApp(root: HTMLElement, sources: ImportSources, store: Colle
     displayFields: { russianTitle: true, originalTitle: true, status: false, userScore: true, communityScore: true, shikimoriLink: true },
     filters: createDisplayFilters(),
     listSort: { key: 'alphabet', reversed: false },
-    collapsedGroups: { status: false, kind: false, score: false, sort: true, settings: true, display: true, filters: true, history: true, distribution: false },
+    collapsedGroups: { status: false, kind: true, score: true, sort: false, settings: true, display: true, filters: false, history: true, distribution: false },
+    selectionSettingsCollapsed: false,
     scenario: 'new', importMode: 'profile',
   };
   const commands = new CollectionCommands();
@@ -48,11 +51,16 @@ export function mountApp(root: HTMLElement, sources: ImportSources, store: Colle
     onProgress: showImportProgress,
     onChange: event => {
       const { method, error } = imports.status;
-      const showListLoading = event === 'start' && method === 'profile';
+      const showListLoading = event === 'profile-verified';
       if (showListLoading) navigate('selection');
       const focusHeading = showListLoading
         || event === 'finish' && method !== 'metadata' && !error && navigation.screen === 'selection';
       render(focusHeading);
+      if (event === 'finish' && method === 'profile' && error && navigation.screen === 'import') {
+        const field = root.querySelector<HTMLInputElement>('#profile-input');
+        if (field && error.code === 'not-found') showMissingProfileDialog(field, error.message);
+        else field?.focus({ preventScroll: true });
+      }
     },
   });
 
@@ -61,15 +69,35 @@ export function mountApp(root: HTMLElement, sources: ImportSources, store: Colle
     if (!(event.target instanceof Element)) return;
     const target = event.target.closest<HTMLElement>('[data-screen], [data-action]');
     if (!target || target.matches(':disabled')) return;
+    if (target.dataset.action === 'score-track' && target !== event.target) return;
     event.preventDefault();
+    if (target.dataset.action === 'open-settings') {
+      const groups = state.collapsedGroups;
+      if (navigation.screen === 'selection') {
+        if (state.selectionSettingsCollapsed) {
+          state.selectionSettingsCollapsed = false;
+          render();
+        }
+      } else if (groups.settings) {
+        groups.settings = false;
+        groups.display = false;
+        render();
+      }
+      renderer.showSettings();
+      return;
+    }
     if (target.dataset.action === 'cancel-import') { imports.cancel(); return; }
     if (target.dataset.action === 'toggle-panel-group') {
       const groups = state.collapsedGroups;
       const group = target.dataset.panelGroup as keyof typeof groups | undefined;
       if (!group || !Object.hasOwn(groups, group)) return;
-      groups[group] = !groups[group];
-      const child = target.dataset.expandGroup as keyof typeof groups | undefined;
-      if (!groups[group] && child && Object.hasOwn(groups, child)) groups[child] = false;
+      if (group === 'settings' && navigation.screen === 'selection') {
+        state.selectionSettingsCollapsed = !state.selectionSettingsCollapsed;
+      } else {
+        groups[group] = !groups[group];
+        const child = target.dataset.expandGroup as keyof typeof groups | undefined;
+        if (!groups[group] && child && Object.hasOwn(groups, child)) groups[child] = false;
+      }
       render();
       root.querySelector<HTMLButtonElement>(`[data-action="toggle-panel-group"][data-panel-group="${group}"]`)?.focus({ preventScroll: true });
       return;
@@ -91,7 +119,10 @@ export function mountApp(root: HTMLElement, sources: ImportSources, store: Colle
     if (destination) {
       const { screens } = navigationAvailability(collection, state.scenario, imports.status.loading);
       if (!screens[destination]) return;
-      if (destination === 'comparison' && !collection?.session) { startComparison(); return; }
+      if (destination === 'comparison') {
+        if (!collection?.session) { startComparison(); return; }
+        if (navigation.screen === 'selection') { resumeComparison(); return; }
+      }
       navigate(destination);
       imports.resetFeedback();
       render(true);
@@ -107,7 +138,7 @@ export function mountApp(root: HTMLElement, sources: ImportSources, store: Colle
     if (!collection) return;
     if (handleRatingAction(target)) return;
     if (target.dataset.action === 'start-comparison') { startComparison(); return; }
-    if (target.dataset.action === 'resume-comparison') { navigate('comparison'); render(true); return; }
+    if (target.dataset.action === 'resume-comparison') { resumeComparison(); return; }
     if (target.dataset.action === 'reposition' && target.dataset.reviewId) { startComparison(target.dataset.reviewId); return; }
     if (target.dataset.action === 'export-collection') { exportCollection(); return; }
     if (navigation.screen === 'result' && target.dataset.action === 'export-shikimori-json') {
@@ -147,6 +178,13 @@ export function mountApp(root: HTMLElement, sources: ImportSources, store: Colle
     if (target.dataset.action === 'select-filter-group') {
       if (toggleFilterGroup(state.filters, target.dataset.filterGroup, collection ? listMedia(collection) : undefined)) render();
       root.querySelector<HTMLButtonElement>(`[data-action="select-filter-group"][data-filter-group="${target.dataset.filterGroup}"]`)?.focus({ preventScroll: true });
+      return;
+    }
+    if (target.dataset.action === 'score-track') {
+      const score = scoreAtPosition(target, event.clientX);
+      if (score === null) return;
+      const { min, max } = state.filters.score;
+      applyScoreBound(score <= (min + max) / 2 ? 'min' : 'max', score);
       return;
     }
     if (target.dataset.action === 'reset-filters') {
@@ -199,6 +237,16 @@ export function mountApp(root: HTMLElement, sources: ImportSources, store: Colle
     render(true);
   }
 
+  /** Возвращает к сравнению и применяет правки, сделанные на экране набора. */
+  function resumeComparison(): void {
+    const updated = navigation.screen === 'selection' ? commands.resumeComparison() : null;
+    if (updated === true) {
+      changeScreen(navigation.comparisonProgressScreen);
+      void saveSelection();
+    } else if (updated === null) navigate('comparison');
+    render(true);
+  }
+
   /** Запускает доступную кнопку сравнения по её клавиатурной комбинации. */
   function handleComparisonShortcut(event: Event): void {
     if (!root.isConnected) {
@@ -210,8 +258,9 @@ export function mountApp(root: HTMLElement, sources: ImportSources, store: Colle
 
     const target = event.target;
     if (!(target instanceof Element) || (!root.contains(target) && target !== root.ownerDocument.body)) return;
-    if (target.closest('input, select, textarea') || (target instanceof HTMLElement && target.isContentEditable)) return;
-    if (event.key === ' ' && target.closest('.theme-toggle, .sidebar-handle')) return;
+    if (root.querySelector('.settings-dialog[open]') || target.closest('input:not([type="checkbox"]), select, textarea')
+      || (target instanceof HTMLElement && target.isContentEditable)) return;
+    if (event.key === ' ' && target.closest('.sidebar-actions, .sidebar-handle, .filter-panel, input[type="checkbox"]')) return;
 
     let shortcut = event.key === ' ' ? 'Space' : event.key;
     if (event.ctrlKey) {
@@ -223,7 +272,9 @@ export function mountApp(root: HTMLElement, sources: ImportSources, store: Colle
     if (!button) return;
 
     event.preventDefault();
-    if (!event.repeat) button.click();
+    if (event.repeat) return;
+    if (target.closest('.filter-panel')) root.querySelector<HTMLElement>('.comparison-section h1')?.focus({ preventScroll: true });
+    button.click();
   }
 
   /** Переводит фокус при переходе между сравнением, пересмотром и результатом. */
@@ -285,7 +336,7 @@ export function mountApp(root: HTMLElement, sources: ImportSources, store: Colle
   function restoreBackup(asCopy: boolean): void {
     const restored = backups.restore(asCopy);
     if (!restored) return;
-    state.filters = createDisplayFilters();
+    state.filters = initialDisplayFilters(listMedia(restored));
     state.scenario = 'new';
     imports.setMessage('Коллекция восстановлена.');
     openCollection(restored, true);
@@ -296,7 +347,7 @@ export function mountApp(root: HTMLElement, sources: ImportSources, store: Colle
   function resumeSelection(): void {
     const stored = persistence.resumeCollection();
     if (!stored) return;
-    state.filters = createDisplayFilters();
+    state.filters = initialDisplayFilters(listMedia(stored));
     imports.resetFeedback(stored.session ? 'Сессия восстановлена.' : 'Набор восстановлен.');
     if (!openCollection(stored)) persistence.rememberOpened(stored);
     render(true);
@@ -307,7 +358,7 @@ export function mountApp(root: HTMLElement, sources: ImportSources, store: Colle
     const previousId = commands.collection?.id;
     commands.replaceCollection(collection);
     if (reason === 'update') return;
-    if (reason === 'restore' || previousId !== collection.id) state.filters = createDisplayFilters();
+    if (reason === 'restore' || previousId !== collection.id) state.filters = initialDisplayFilters(listMedia(collection));
     if (reason === 'restore' || collection.orderedIds.length === 0) state.scenario = 'new';
     navigate('selection');
   }
@@ -318,6 +369,7 @@ export function mountApp(root: HTMLElement, sources: ImportSources, store: Colle
     if (status) {
       status.textContent = message;
       status.title = message;
+      status.hidden = !message;
       renderer.contentUpdated();
     }
   }
@@ -372,6 +424,16 @@ export function mountApp(root: HTMLElement, sources: ImportSources, store: Colle
     const collection = commands.collection;
     if (!(event.target instanceof HTMLInputElement) || !collection) return;
     const input = event.target;
+    if (input.name === 'score-unrated') {
+      state.filters.score = { ...state.filters.score, unratedOnly: input.checked };
+      render();
+      return;
+    }
+    const scoreBound = scoreInputBound(input, state.filters.score);
+    if (scoreBound) {
+      applyScoreBound(scoreBound, input.valueAsNumber);
+      return;
+    }
     if (input.name === 'display-field') {
       const field = input.value;
       if (field !== 'russianTitle' && field !== 'originalTitle' && field !== 'status' && field !== 'userScore' && field !== 'communityScore' && field !== 'shikimoriLink') return;
@@ -411,6 +473,23 @@ export function mountApp(root: HTMLElement, sources: ImportSources, store: Colle
           ?? root.querySelector<HTMLButtonElement>('[data-action="reset-filters"]'))?.focus();
       } else updateSelection();
     }
+  }
+
+  /** Применяет выбранную границу и возвращает фокус к её бегунку после обновления. */
+  function applyScoreBound(bound: 'min' | 'max', score: number): void {
+    state.filters.score = withScoreBound(state.filters.score, bound, score);
+    render();
+    root.querySelector<HTMLInputElement>(`#score-${bound}, #score-merged`)?.focus({ preventScroll: true });
+  }
+
+  /** Показывает значение диапазона во время перетаскивания бегунка. */
+  function handleInput(event: Event): void {
+    const input = event.target;
+    if (!(input instanceof HTMLInputElement)) return;
+    const bound = scoreInputBound(input, state.filters.score);
+    if (!bound) return;
+    const range = withScoreBound(state.filters.score, bound, input.valueAsNumber);
+    previewScoreRange(input, range, bound);
   }
 
   /** Заменяет недоступную обложку, сохраняя работоспособность карточки. */
@@ -498,6 +577,7 @@ export function mountApp(root: HTMLElement, sources: ImportSources, store: Colle
   keyboardScope.addEventListener('keydown', handleComparisonShortcut);
   root.addEventListener('submit', handleSubmit);
   root.addEventListener('paste', normalizeShikimoriProfilePaste);
+  root.addEventListener('input', handleInput);
   root.addEventListener('change', handleChange);
   root.addEventListener('error', handleImageError, true);
   render();

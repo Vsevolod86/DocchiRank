@@ -17,7 +17,7 @@ export function activeActions(history: readonly SortingEvent[]): SortingEvent[] 
 export function effectiveAnswers(active: readonly SortingEvent[]): Map<string, SortingEvent> {
   const effective = new Map<string, SortingEvent>();
   for (const event of active) {
-    if (event.type === 'answer') effective.set(event.id, { ...event });
+    if (event.type === 'answer' || event.type === 'reuse') effective.set(event.id, { ...event });
     if (event.type === 'revise') {
       const original = effective.get(event.targetEventId!);
       if (!original || !isRelation(original.answer)) throw new Error('Не найден ответ для пересмотра.');

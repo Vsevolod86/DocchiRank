@@ -86,6 +86,8 @@ export interface RatingTransition {
   choices?: Record<WorkId, Score>;
 }
 
+export type ComparisonMode = 'new' | 'add' | 'review';
+
 /** Независимая коллекция одного профиля с выборкой, порядком и состоянием сортировки. */
 export interface Collection extends SourceSnapshot {
   id: string;
@@ -93,6 +95,8 @@ export interface Collection extends SourceSnapshot {
   selectedIds: WorkId[];
   orderedIds: WorkId[];
   session: SortingSession | null;
+  /** Отметки при последнем применении набора к сессии. */
+  comparisonSelection?: { ids: WorkId[]; scenario?: ComparisonMode };
   archivedSessions?: SortingSession[];
   ratings: RatingScale;
   ratingTransition?: RatingTransition;

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { LIST_STATUSES } from '../../entities/collection/model';
 import type { Collection, ListStatus, Score } from '../../entities/collection/model';
-import { createDisplayFilters, cycleDisplayFilter, SCORE_FILTERS, toggleFilterGroup, visibleEntries } from './filters';
+import { createDisplayFilters, cycleDisplayFilter, toggleFilterGroup, visibleEntries, withScoreBound } from './filters';
 
 describe('фильтры отображения', () => {
   it('совмещает тип произведения с оценкой, различает неизвестный тип и сбрасывает ограничение последним флагом', () => {
@@ -13,9 +13,9 @@ describe('фильтры отображения', () => {
     cycleDisplayFilter(filters, 'kind', 'movie');
     cycleDisplayFilter(filters, 'kind', 'ova');
     expect(visibleEntries(collection, filters).map(entry => entry.animeId)).toEqual(['2', '3']);
-    cycleDisplayFilter(filters, 'score', '8');
+    filters.score = { min: 8, max: 8, unratedOnly: false };
     expect(visibleEntries(collection, filters).map(entry => entry.animeId)).toEqual(['2']);
-    cycleDisplayFilter(filters, 'score', '8');
+    filters.score = createDisplayFilters().score;
     cycleDisplayFilter(filters, 'kind', 'movie');
     cycleDisplayFilter(filters, 'kind', 'ova');
     expect(visibleEntries(collection, filters)).toHaveLength(9);
@@ -34,7 +34,6 @@ describe('фильтры отображения', () => {
     const filters = createDisplayFilters();
     expect(visibleEntries(collection, filters)).toEqual(collection.entries);
     expect(Object.values(filters.status).every(enabled => !enabled)).toBe(true);
-    expect(Object.values(filters.score).every(enabled => !enabled)).toBe(true);
     filters.status.completed = true;
     expect(visibleEntries(collection, filters).map(entry => entry.animeId)).toEqual(['1', '2', '5']);
     expect(collection).toEqual(before);
@@ -54,15 +53,11 @@ describe('фильтры отображения', () => {
     expect(visibleEntries(collection, filters).map(entry => entry.animeId)).toEqual(['4']);
     filters.status.planned = false;
     expect(visibleEntries(collection, filters)).toEqual(collection.entries);
-    filters.score['8'] = true;
-    expect(visibleEntries(collection, filters).map(entry => entry.animeId)).toEqual(['2']);
-    filters.score['8'] = false;
-    expect(visibleEntries(collection, filters)).toEqual(collection.entries);
   });
 
   it('кнопка группы переключает все флаги и сохраняет другие условия', () => {
     const filters = createDisplayFilters();
-    filters.score['8'] = true;
+    filters.score = { min: 8, max: 8, unratedOnly: false };
     filters.selection = 'exclude';
     expect(toggleFilterGroup(filters, 'status')).toBe(true);
     expect(Object.values(filters.status).every(Boolean)).toBe(true);
@@ -72,23 +67,23 @@ describe('фильтры отображения', () => {
     toggleFilterGroup(filters, 'status');
     expect(Object.values(filters.status).every(Boolean)).toBe(true);
     expect(toggleFilterGroup(filters, 'selection')).toBe(false);
-    expect(filters.score['8']).toBe(true);
+    expect(filters.score).toEqual({ min: 8, max: 8, unratedOnly: false });
     expect(filters.selection).toBe('exclude');
   });
 
   it('совместно применяет статус, исходную оценку и исключение отмеченных', () => {
     const filters = createDisplayFilters();
     for (const status of LIST_STATUSES) filters.status[status] = status === 'completed';
-    for (const score of SCORE_FILTERS) filters.score[score] = score === '8' || score === '9';
+    filters.score = { min: 8, max: 9, unratedOnly: false };
     filters.selection = 'exclude';
     expect(visibleEntries(fixture(), filters).map(entry => entry.animeId)).toEqual(['2']);
   });
 
   it.each([
-    ['unrated', ['4', '5']], ['1', ['6']], ['10', ['7']],
+    [null, ['4', '5']], [1, ['6']], [10, ['7']],
   ] as const)('отличает отсутствие оценки и крайние числовые значения: %s', (value, expected) => {
     const filters = createDisplayFilters();
-    for (const score of SCORE_FILTERS) filters.score[score] = score === value;
+    filters.score = value === null ? { ...filters.score, unratedOnly: true } : { min: value, max: value, unratedOnly: false };
     expect(visibleEntries(fixture(), filters).map(entry => entry.animeId)).toEqual(expected);
   });
 
@@ -103,19 +98,25 @@ describe('фильтры отображения', () => {
     expect(visibleEntries(collection, filters).map(entry => entry.animeId)).toEqual(['1', '2', '4', '6', '8']);
   });
 
-  it('переключает статусы и оценки только между двумя состояниями', () => {
+  it('переключает статусы только между двумя состояниями', () => {
     const filters = createDisplayFilters();
     for (const expected of [true, false, true, false]) {
-      expect(cycleDisplayFilter(filters, 'score', '8')).toBe(true);
       expect(cycleDisplayFilter(filters, 'status', 'completed')).toBe(true);
-      expect(filters.score['8']).toBe(expected);
       expect(filters.status.completed).toBe(expected);
     }
     const before = structuredClone(filters);
-    expect(cycleDisplayFilter(filters, 'score', '0')).toBe(false);
     expect(cycleDisplayFilter(filters, '__proto__', 'selected')).toBe(false);
     expect(cycleDisplayFilter(filters, 'status', undefined)).toBe(false);
     expect(filters).toEqual(before);
+  });
+
+  it('удерживает бегунки в пределах шкалы и сохраняет диапазон в режиме без оценки', () => {
+    const range = { min: 3, max: 7, unratedOnly: false } as const;
+    const unrated = { ...range, unratedOnly: true };
+    expect(withScoreBound(range, 'min', 9)).toEqual({ min: 7, max: 7, unratedOnly: false });
+    expect(withScoreBound(range, 'max', 1)).toEqual({ min: 3, max: 3, unratedOnly: false });
+    expect(withScoreBound(range, 'min', 0)).toBe(range);
+    expect(withScoreBound(unrated, 'min', 4)).toBe(unrated);
   });
 
   it('одним тройным флагом выбирает отмеченные, неотмеченные или все произведения', () => {

@@ -17,6 +17,8 @@ export interface ImportOptions {
 /** Категория списка для источников с несколькими каталогами. */
 export interface ListLoadOptions extends ImportOptions {
   media?: ListMedia;
+  /** Уведомляет об успешной проверке профиля перед обращением к списку. */
+  onProfileVerified?: (profile: Profile) => void;
 }
 
 /** Источник списка, изолированный от выбора произведений, сортировки и хранения. */

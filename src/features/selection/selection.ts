@@ -1,3 +1,4 @@
+import { comparisonSelection } from '../../entities/collection/comparison';
 import type { Collection } from '../../entities/collection/model';
 import { visibleEntries } from './filters';
 import type { DisplayFilters } from './filters';
@@ -22,7 +23,7 @@ export function selectAnime(collection: Collection, id: string, checked: boolean
   const selected = new Set(collection.selectedIds);
   if (checked) selected.add(id);
   else selected.delete(id);
-  collection.selectedIds = [...selected];
+  setSelection(collection, selected);
   return true;
 }
 
@@ -34,6 +35,15 @@ export function toggleVisibleSelection(collection: Collection, filters: DisplayF
     if (allSelected) selected.delete(animeId);
     else selected.add(animeId);
   }
-  collection.selectedIds = [...selected];
+  setSelection(collection, selected);
   return true;
+}
+
+/** Запоминает исходные отметки незавершённого сравнения, пока пользователь редактирует набор. */
+function setSelection(collection: Collection, selected: Set<string>): void {
+  if (collection.session?.progress.current && !collection.comparisonSelection) {
+    const snapshot = comparisonSelection(collection);
+    collection.comparisonSelection = { ...snapshot, ids: [...snapshot.ids] };
+  }
+  collection.selectedIds = [...selected];
 }

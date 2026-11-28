@@ -44,7 +44,9 @@ function preparePage(screen: Screen, collection: Collection | null, state: ViewS
     return selectionPage(collection, {
       cardLayout: state.cardLayout, displayFields, filters, listSort,
       scenario: state.scenario, import: state.import, comparisonError, comparisonComplete: sorting?.status === 'complete',
-    }, settings, canCompare);
+    }, {
+      ...settings, collapsedGroups: { ...collapsedGroups, settings: state.selectionSettingsCollapsed },
+    }, canCompare);
   }
   if (screen === 'import' || !collection) {
     return importPage({

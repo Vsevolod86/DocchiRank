@@ -15,6 +15,7 @@ export interface ScreenPreferences {
   filters: DisplayFilters;
   listSort: ListSort;
   collapsedGroups: Record<PanelGroup, boolean>;
+  selectionSettingsCollapsed: boolean;
   scenario: ComparisonScenario;
   importMode: ImportMethod;
 }

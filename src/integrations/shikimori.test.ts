@@ -25,7 +25,9 @@ describe('импорт Shikimori', () => {
       times.push(Date.now());
       return Response.json(replies.shift());
     });
-    const result = await finish(new ShikimoriSource(fetcher).load('123', { media }));
+    const onProfileVerified = vi.fn(() => expect(fetcher).toHaveBeenCalledTimes(1));
+    const result = await finish(new ShikimoriSource(fetcher).load('123', { media, onProfileVerified }));
+    expect(onProfileVerified).toHaveBeenCalledExactlyOnceWith({ ...profile, id: '1', source: 'shikimori' });
     expect(listMedia(result)).toBe(media);
     expect(result.entries).toHaveLength(51);
     expect(new Set(result.entries.map(entry => entry.animeId)).size).toBe(51);
@@ -58,8 +60,10 @@ describe('импорт Shikimori', () => {
 
   it('останавливается после отсутствующего профиля, не запрашивая список', async () => {
     const fetcher = sequence(new Response('', { status: 404 }));
-    await failure(new ShikimoriSource(fetcher).load('missing'), 'not-found');
+    const onProfileVerified = vi.fn();
+    await failure(new ShikimoriSource(fetcher).load('missing', { onProfileVerified }), 'not-found');
     expect(fetcher).toHaveBeenCalledTimes(1);
+    expect(onProfileVerified).not.toHaveBeenCalled();
   });
 
   it('проверяет ник одним запросом профиля без запроса списка', async () => {

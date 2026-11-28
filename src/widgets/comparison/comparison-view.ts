@@ -79,20 +79,21 @@ function comparisonCard(anime: Work, collection: Collection, fields: Readonly<An
     });
 }
 
-/** Разделяет известные пары на прямые ответы и выводы относительно фиксированного числа всех пар. */
+/** Показывает, сколько прямых ответов дано и сколько их ориентировочно понадобится. */
 function comparisonProgress(view: EngineView): string {
-    const upper = view.comparisonTotal;
-    const madeWidth = upper > 0 ? Math.min(100, 100 * view.directComparisonCount / upper) : 0;
-    const inferredWidth = upper > 0 ? Math.min(100 - madeWidth, 100 * view.inferredComparisonCount / upper) : 0;
-    const counters = [
-        ['manual', view.directComparisonCount, 'Выполненных сравнений'],
-        ['inferred', view.inferredComparisonCount, 'Определено по другим парам'],
-        ['maximum', upper, 'Общее число пар в этом раунде'],
-    ] as const;
-    return `<div class="comparison-progress" aria-label="Известные отношения между тайтлами">
-      <div class="comparison-progress-track" role="progressbar" aria-label="Прямые и транзитивные сравнения" aria-valuemin="0" aria-valuemax="${Math.max(1, upper)}" aria-valuenow="${Math.min(upper, view.directComparisonCount + view.inferredComparisonCount)}" aria-valuetext="Прямые: ${view.directComparisonCount}; транзитивно: ${view.inferredComparisonCount}; всего пар: ${upper}">
-        <span class="comparison-progress-manual" style="width:${madeWidth}%" title="Прямые сравнения: ${view.directComparisonCount}"></span><span class="comparison-progress-inferred" style="width:${inferredWidth}%" title="Транзитивные сравнения: ${view.inferredComparisonCount}"></span>
+    const answered = view.directComparisonCount;
+    const total = answered + view.remainingEstimate;
+    const complete = view.status === 'complete';
+    const label = complete ? `${answered} из ${total} сравнений` : `${answered} из примерно ${total} сравнений`;
+    const displayedTotal = complete ? total : `~${total}`;
+    const width = complete ? 100 : 100 * answered / total;
+    const percent = `${view.progressPercent}%`;
+    return `<div class="comparison-progress">
+      <div class="comparison-progress-track" role="progressbar" aria-label="Прогресс сравнения"
+        aria-valuemin="0" aria-valuemax="${Math.max(1, total)}" aria-valuenow="${total === 0 ? 1 : answered}"
+        aria-valuetext="${label}, ${percent}" data-progress-percent="${percent}">
+        <span class="comparison-progress-line" style="--comparison-fill:${width}%"></span>
       </div>
-      <div class="comparison-counters">${counters.map(([key, count, description]) => `<span data-comparison-counter="${key}" tabindex="0" title="${description}" aria-label="${description} Значение: ${count}">${count}</span>`).join('<span class="counter-separator" aria-hidden="true">/</span>')}</div>
+      <p class="comparison-progress-label" aria-hidden="true"><strong>${answered}</strong> из ${displayedTotal}</p>
     </div>`;
 }

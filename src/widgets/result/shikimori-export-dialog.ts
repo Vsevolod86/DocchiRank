@@ -9,6 +9,9 @@ import { renderInput } from '../../shared/ui/input';
 import { normalizeShikimoriProfilePaste, renderShikimoriProfileField } from '../shikimori/profile-field';
 
 const downloadNoticeMs = 5_000;
+const downloadNoticeKey = 'docchirank.shikimori-download-notice-seen';
+const downloadNoticeRepeatChance = 0.2;
+let noticeShownWithoutStorage = false;
 
 /** Подготавливает обновлённую выгрузку и ссылки для проверенного профиля. */
 export function openShikimoriExportDialog(collection: Collection, grades: ReadonlyMap<string, Score>,
@@ -27,7 +30,7 @@ export function openShikimoriExportDialog(collection: Collection, grades: Readon
     </header>
     <ol class="small shikimori-export-steps">
       <li aria-current="step">
-        <p><strong class="shikimori-export-step-title">Исходный список.</strong> Укажи ник или ссылку на профиль и скачай список из Shikimori.</p>
+        <p><strong class="shikimori-export-step-title">Исходный список.</strong> Укажи ник или ссылку на профиль и скачай json-список из Shikimori.</p>
         <form id="shikimori-export-profile-form">
           <div class="shikimori-export-profile-field">
             ${renderShikimoriProfileField({ id: 'shikimori-export-nickname', value: suggestedNickname, describedBy: 'shikimori-export-profile-status' })}
@@ -42,9 +45,9 @@ export function openShikimoriExportDialog(collection: Collection, grades: Readon
         <form id="shikimori-export-file-form">
           <label for="shikimori-export-input">Исходная выгрузка ${list}</label>
           ${renderInput({
-            type: 'file', accept: '.json,application/json', appearance: 'outlined', required: true,
-            attributes: { id: 'shikimori-export-input' },
-          })}
+        type: 'file', accept: '.json,application/json', appearance: 'outlined', required: true,
+        attributes: { id: 'shikimori-export-input' },
+    })}
           <p class="shikimori-export-note muted">Сохрани исходный список, чтобы при необходимости восстановить прежние оценки.</p>
           <div class="shikimori-export-warning" role="status" hidden>
             <p>В исходном файле нет этих тайтлов. В обновлённый файл они попадут со статусом «Запланировано» и нулём ${progress}.</p>
@@ -60,9 +63,9 @@ export function openShikimoriExportDialog(collection: Collection, grades: Readon
             <p class="shikimori-export-note muted">DocchiRank обрабатывает файл локально, в твоём браузере.</p>
           </div>
           ${renderButton({
-            label: 'Скачать JSON', variant: 'primary', type: 'submit', disabled: true,
-            form: 'shikimori-export-file-form',
-          })}
+        label: 'Скачать JSON', variant: 'primary', type: 'submit', disabled: true,
+        form: 'shikimori-export-file-form',
+    })}
         </div>
         <p id="shikimori-export-download-status" role="status" hidden></p>
       </li>
@@ -172,6 +175,21 @@ export function openShikimoriExportDialog(collection: Collection, grades: Readon
         }
     }
 
+    /** Запускает скачивание, если в открытом окне всё ещё выбран подготовленный файл. */
+    function downloadPreparedFile(pending: NonNullable<typeof prepared>): void {
+        if (!dialog.open || prepared !== pending || input.files?.[0] !== pending.file) return;
+        submit.disabled = false;
+        const { file, result } = pending;
+        try {
+            downloadJson(`${file.name.replace(/\.json$/i, '')}-docchirank.json`, result.text);
+            downloadStarted = true;
+            updateSteps();
+            showStatus(downloadStatus, `Изменено оценок: ${result.updated}. Добавлено тайтлов: ${result.added.length}.`);
+        } catch {
+            showStatus(downloadStatus, 'Не удалось начать скачивание. Попробуй ещё раз.', true);
+        }
+    }
+
     /** Убирает плашку и отменяет ожидающее скачивание при смене файла или закрытии окна. */
     function clearPendingDownload(): void {
         if (downloadTimer !== null) clearTimeout(downloadTimer);
@@ -195,23 +213,17 @@ export function openShikimoriExportDialog(collection: Collection, grades: Readon
     input.addEventListener('change', () => { void prepareFile(); });
     fileForm.addEventListener('submit', event => {
         event.preventDefault();
-        if (downloadTimer !== null || !prepared || input.files?.[0] !== prepared.file) return;
+        if (!dialog.open || downloadTimer !== null || !prepared || input.files?.[0] !== prepared.file) return;
         const pending = prepared;
+        if (!shouldShowDownloadNotice()) {
+            downloadPreparedFile(pending);
+            return;
+        }
         submit.disabled = true;
         downloadOverlay.hidden = false;
         downloadTimer = setTimeout(() => {
             clearPendingDownload();
-            if (!dialog.open || prepared !== pending || input.files?.[0] !== pending.file) return;
-            submit.disabled = false;
-            const { file, result } = pending;
-            try {
-                downloadJson(`${file.name.replace(/\.json$/i, '')}-docchirank.json`, result.text);
-                downloadStarted = true;
-                updateSteps();
-                showStatus(downloadStatus, `Изменено оценок: ${result.updated}. Добавлено тайтлов: ${result.added.length}.`);
-            } catch {
-                showStatus(downloadStatus, 'Не удалось начать скачивание. Попробуй ещё раз.', true);
-            }
+            downloadPreparedFile(pending);
         }, downloadNoticeMs);
     });
     dialog.addEventListener('close', () => {
@@ -222,6 +234,19 @@ export function openShikimoriExportDialog(collection: Collection, grades: Readon
     document.body.append(dialog);
     dialog.showModal();
     void verifyNickname();
+}
+
+/** Показывает уведомление при первом скачивании, затем применяет вероятность повторного показа. */
+function shouldShowDownloadNotice(): boolean {
+    if (noticeShownWithoutStorage) return Math.random() < downloadNoticeRepeatChance;
+    try {
+        const storage = window.localStorage;
+        if (storage.getItem(downloadNoticeKey) === '1') return Math.random() < downloadNoticeRepeatChance;
+        storage.setItem(downloadNoticeKey, '1');
+    } catch {
+        noticeShownWithoutStorage = true;
+    }
+    return true;
 }
 
 /** Показывает сообщение о проверке или подготовке JSON. */

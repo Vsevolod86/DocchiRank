@@ -14,7 +14,8 @@ beforeEach(async () => {
   store = new MemoryCollectionStore();
   mountApp(root, { demo: { load: async () => structuredClone(LIST_FIXTURE) }, shikimori: new ShikimoriSource() }, store);
   button('[data-action="load-demo"]').click();
-  await vi.waitFor(() => { expect(root.querySelectorAll('.anime-choice')).toHaveLength(6); });
+  await vi.waitFor(() => { expect(cardIds()).toHaveLength(5); });
+  button('[data-action="reset-filters"]').click();
 });
 
 afterEach(() => {
@@ -23,19 +24,27 @@ afterEach(() => {
 });
 
 describe('выбор групп и карточек', () => {
-  it('объединяет подразделы настроек и сохраняет их сворачивание и значения после обновления списка', () => {
+  it('открывает набор с заданными фильтрами и сохраняет сворачивание после обновления экрана', async () => {
+    button('[data-screen="import"]').click();
+    button('[data-action="load-demo"]').click();
+    await vi.waitFor(() => { expect(cardIds()).toHaveLength(5); });
+    expect(cardIds()).not.toContain('32281');
+    expect(Array.from(root.querySelectorAll<HTMLInputElement>('[data-filter-group="status"]:checked'), input => input.dataset.filterValue))
+      .toEqual(['rewatching', 'completed']);
+    expect(Array.from(root.querySelectorAll<HTMLInputElement>('[data-filter-group="kind"]:checked'), input => input.dataset.filterValue))
+      .toEqual(['tv', 'movie', 'ona']);
     expect(root.querySelector('.filter-panel h2')!.textContent!.trim()).toBe('Настройки');
     expect(Array.from(root.querySelectorAll('#panel-settings-options h3'), heading => heading.textContent!.trim()))
       .toEqual(['Отображение', 'Сортировка', 'Фильтры']);
     expect(Array.from(root.querySelectorAll('#panel-filters-options h4'), heading => heading.textContent!.trim()))
       .toEqual(['Статус', 'Тип произведения', 'Моя оценка']);
-    expect(root.querySelector<HTMLElement>('#panel-settings-options')!.hidden).toBe(true);
-    button('[data-panel-group="settings"]').click();
     expect(root.querySelector<HTMLElement>('#panel-settings-options')!.hidden).toBe(false);
+    expect(root.querySelector<HTMLElement>('#panel-filters-options')!.hidden).toBe(false);
     expect(root.querySelector<HTMLElement>('#panel-display-options')!.hidden).toBe(true);
-    expect(root.querySelector<HTMLElement>('#panel-filters-options')!.hidden).toBe(true);
-    button('[data-panel-group="filters"]').click();
-    button('[data-filter-value="8"]').click();
+    expect(root.querySelector<HTMLElement>('#panel-kind-options')!.hidden).toBe(true);
+    expect(root.querySelector<HTMLElement>('#panel-score-options')!.hidden).toBe(true);
+    button('[data-panel-group="score"]').click();
+    setScoreRange(8, 8);
     button('[data-panel-group="filters"]').click();
     expect(root.querySelector<HTMLElement>('#panel-display-options')!.hidden).toBe(true);
     expect(root.querySelector<HTMLElement>('#panel-filters-options')!.hidden).toBe(true);
@@ -54,23 +63,59 @@ describe('выбор групп и карточек', () => {
     expect(root.querySelectorAll('.anime-table thead th')).toHaveLength(5);
   });
 
+  it('переносит те же настройки в модальное окно и использует их для отбора', () => {
+    const panel = root.querySelector('.filter-panel')!;
+    const dialog = root.querySelector<HTMLDialogElement>('.settings-dialog')!;
+    button('[data-action="open-settings"]').click();
+    expect(dialog.open).toBe(true);
+    expect(dialog.querySelector('.filter-panel')).toBe(panel);
+    button('[data-panel-group="score"]').click();
+    setScoreRange(8, 8);
+    expect(cardIds()).toHaveLength(2);
+    root.querySelector<HTMLInputElement>('[name="score-unrated"]')!.click();
+    expect(cardIds()).toEqual(['33352', '32281']);
+    expect(root.querySelector<HTMLInputElement>('#score-merged')!.disabled).toBe(true);
+    expect(dialog.querySelector('[data-action="score-track"]')).toBeNull();
+    root.querySelector<HTMLInputElement>('[name="score-unrated"]')!.click();
+    expect(root.querySelector<HTMLInputElement>('#score-merged')!.disabled).toBe(false);
+    expect(root.querySelector<HTMLInputElement>('#score-merged')!.value).toBe('8');
+    expect(cardIds()).toHaveLength(2);
+    button('[data-close-settings]').click();
+    expect(dialog.open).toBe(false);
+    expect(cardIds()).toHaveLength(2);
+  });
+
+  it('раздвигает общий бегунок в обе стороны от выбранной оценки', () => {
+    setScoreRange(8, 8);
+    expect(root.querySelectorAll('.score-slider input')).toHaveLength(1);
+    changeScore(root.querySelector<HTMLInputElement>('#score-merged')!, 7);
+    expect(root.querySelector('#score-range-label')!.textContent).toBe('7–8');
+
+    setScoreRange(8, 8);
+    changeScore(root.querySelector<HTMLInputElement>('#score-merged')!, 9);
+    expect(root.querySelector('#score-range-label')!.textContent).toBe('8–9');
+    expect(root.querySelectorAll('.score-slider input')).toHaveLength(2);
+  });
+
   it('сохраняет прокрутку правой панели и фокус при изменении фильтров и сортировки', () => {
     root.querySelector<HTMLElement>('.filter-panel')!.scrollTop = 420;
-    button('[data-filter-value="8"]').click();
+    setScoreRange(8, 8);
     expect(root.querySelector<HTMLElement>('.filter-panel')!.scrollTop).toBe(420);
-    expect(document.activeElement).toBe(button('[data-filter-value="8"]'));
+    expect(document.activeElement).toBe(root.querySelector('#score-merged'));
     expect(cardIds()).toHaveLength(2);
 
     root.querySelector<HTMLInputElement>('input[name="title-sort"][value="my-score"]')!.click();
     expect(root.querySelector<HTMLElement>('.filter-panel')!.scrollTop).toBe(420);
     expect(document.activeElement).toBe(root.querySelector('input[name="title-sort"][value="my-score"]'));
-    button('[data-action="select-filter-group"][data-filter-group="score"]').click();
+    setScoreRange(1, 10);
     expect(root.querySelector<HTMLElement>('.filter-panel')!.scrollTop).toBe(420);
     expect(cardIds()).toHaveLength(6);
   });
 
   it('сворачивает группы, сохраняя фильтры и синхронизацию сортировки при обновлении интерфейса', () => {
     const selected = store.get('demo')!.selectedIds;
+    button('[data-panel-group="sort"]').click();
+    button('[data-panel-group="kind"]').click();
     button('[data-filter-group="kind"][data-filter-value="movie"]').click();
     button('[data-panel-group="kind"]').click();
     expect(root.querySelector<HTMLElement>('#panel-sort-options')!.hidden).toBe(true);
@@ -96,7 +141,7 @@ describe('выбор групп и карточек', () => {
     const selected = store.get('demo')!.selectedIds;
     button('[data-filter-group="kind"][data-filter-value="movie"]').click();
     expect(cardIds()).toEqual(['32281', '199']);
-    button('[data-filter-value="9"]').click();
+    setScoreRange(9, 9);
     expect(cardIds()).toEqual(['199']);
     button('[data-action="reset-filters"]').click();
     expect(cardIds()).toHaveLength(6);
@@ -113,7 +158,7 @@ describe('выбор групп и карточек', () => {
     button('[data-action="load-demo"]').click();
     await vi.waitFor(() => {
       expect(root.querySelector<HTMLInputElement>('input[name="comparison-scenario"][value="review"]')!.disabled).toBe(false);
-      expect(root.querySelectorAll('.anime-choice')).toHaveLength(6);
+      expect(root.querySelectorAll('.anime-choice')).toHaveLength(5);
     });
     root.querySelector<HTMLInputElement>('input[name="comparison-scenario"][value="review"]')!.click();
     expect(root.querySelector('.scenario-card.active input')!.getAttribute('value')).toBe('review');
@@ -125,7 +170,7 @@ describe('выбор групп и карточек', () => {
   it('переключает три формата без изменения выборки, фильтров и сортировки, а список не содержит обложек', () => {
     expect(Array.from(root.querySelectorAll('.view-switch button'), item => item.getAttribute('aria-label'))).toEqual(['Крупные карточки', 'Средние карточки', 'Список']);
     expect(button('[data-layout="compact"]').getAttribute('aria-pressed')).toBe('true');
-    button('[data-filter-value="8"]').click();
+    setScoreRange(8, 8);
     root.querySelector<HTMLInputElement>('input[name="title-sort"][value="my-score"]')!.click();
     button('[data-action="reverse-list-sort"]').click();
     const collection = store.get('demo');
@@ -169,7 +214,6 @@ describe('выбор групп и карточек', () => {
 
     button('[data-action="reverse-list-sort"]').click();
     expect(button('[data-sort-key="my-score"]').closest('th')!.getAttribute('aria-sort')).toBe('descending');
-    button('[data-panel-group="settings"]').click();
     button('[data-panel-group="display"]').click();
     root.querySelector<HTMLInputElement>('[name="display-field"][value="status"]')!.click();
     root.querySelector<HTMLInputElement>('input[name="title-sort"][value="status"]')!.click();
@@ -215,7 +259,7 @@ describe('выбор групп и карточек', () => {
     expect(cardIds()).toEqual(['5114', '199', '9253', '1', '33352', '32281']);
     button('[data-action="reverse-list-sort"]').click();
     expect(cardIds()).toEqual(['9253', '1', '5114', '199', '33352', '32281']);
-    button('[data-filter-value="8"]').click();
+    setScoreRange(8, 8);
     expect(cardIds()).toEqual(['9253', '1']);
     button('[data-screen="import"]').click();
     button('[data-screen="selection"]').click();
@@ -247,7 +291,7 @@ describe('выбор групп и карточек', () => {
 
   it('переключает только показанные тайтлы, сохраняя скрытые отметки', () => {
     root.querySelector<HTMLElement>('[data-anime="5114"]')!.click();
-    button('[data-filter-value="8"]').click();
+    setScoreRange(8, 8);
     expect(root.querySelectorAll('.anime-choice')).toHaveLength(2);
     expect(button('[data-action="select-all"]').textContent).toBe('Снять видимые отметки');
     button('[data-action="select-all"]').click();
@@ -284,19 +328,18 @@ describe('выбор групп и карточек', () => {
   it('выбирает всю группу, сохраняя ограничения другой группы и отметки карточек', () => {
     expect(button('[data-action="select-filter-group"][data-filter-group="status"]').textContent).toBe('Выбрать всё');
     button('[data-filter-value="completed"]').click();
-    button('[data-filter-value="8"]').click();
+    setScoreRange(8, 8);
     expect(root.querySelectorAll('.anime-choice')).toHaveLength(2);
     button('[data-action="select-filter-group"][data-filter-group="status"]').click();
     expect(button('[data-action="select-filter-group"][data-filter-group="status"]').textContent).toBe('Убрать всё');
     expect(button('[data-action="select-filter-group"][data-filter-group="status"]').getAttribute('aria-label')).toBe('Убрать всё: Статус');
     expect(root.querySelectorAll('.anime-choice')).toHaveLength(2);
-    expect(root.querySelector<HTMLInputElement>('[data-filter-value="8"]')!.checked).toBe(true);
+    expect(root.querySelector<HTMLInputElement>('#score-merged')!.value).toBe('8');
     button('[data-action="select-filter-group"][data-filter-group="status"]').click();
     expect(button('[data-action="select-filter-group"][data-filter-group="status"]').textContent).toBe('Выбрать всё');
     expect(root.querySelectorAll('.anime-choice')).toHaveLength(2);
     expect(root.querySelectorAll('[data-filter-group="status"]:checked')).toHaveLength(0);
-    button('[data-action="select-filter-group"][data-filter-group="score"]').click();
-    expect(button('[data-action="select-filter-group"][data-filter-group="score"]').textContent).toBe('Убрать всё');
+    setScoreRange(1, 10);
     expect(root.querySelectorAll('.anime-choice')).toHaveLength(6);
     expect(root.querySelectorAll('input[name="anime"]:checked')).toHaveLength(6);
   });
@@ -317,6 +360,22 @@ describe('выбор групп и карточек', () => {
     expect(store.get('demo')!.selectedIds).toEqual(['5114']);
   });
 });
+
+/** Применяет обе границы через нативное событие изменения диапазона. */
+function setScoreRange(min: number, max: number): void {
+  const currentMax = root.querySelector<HTMLInputElement>('#score-max, #score-merged')!.valueAsNumber;
+  const bounds = [['min', min], ['max', max]] as const;
+  for (const [bound, score] of min > currentMax ? [...bounds].reverse() : bounds) {
+    const input = root.querySelector<HTMLInputElement>(`#score-${bound}, #score-merged`)!;
+    if (input.valueAsNumber !== score) changeScore(input, score);
+  }
+}
+
+/** Имитирует изменение одного бегунка, включая общий бегунок точной оценки. */
+function changeScore(input: HTMLInputElement, score: number): void {
+  input.value = String(score);
+  input.dispatchEvent(new Event('change', { bubbles: true }));
+}
 
 /** Находит текущую кнопку после возможного обновления панели фильтров. */
 function button(selector: string): HTMLButtonElement {

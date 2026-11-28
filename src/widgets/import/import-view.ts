@@ -21,7 +21,8 @@ export function importView(state: ImportViewOptions, importIcon: string): string
     const canResume = !!savedCollection;
     const { loading, media, profileInput } = state.import;
     const method = state.importMode;
-    const loadLabel = loading ? 'Загружаю…' : state.import.error && state.import.method === 'profile' ? 'Повторить загрузку' : 'Загрузить список';
+    const feedbackInProfile = method === 'profile' && state.import.method === 'profile';
+    const loadLabel = loading ? 'Проверяю ник…' : feedbackInProfile && state.import.error ? 'Повторить загрузку' : 'Загрузить список';
     return `<section class="intro">
     <h1 tabindex="-1">Упорядочи тайтлы по своим предпочтениям</h1>
     <p class="lead">Сравнивай аниме, мангу или ранобэ попарно. DocchiRank соберёт из ответов твой личный рейтинг.<br class="desktop-break"> Тайтл выше в списке получит такую же оценку или выше, чем тайтл ниже.</p>
@@ -54,11 +55,12 @@ export function importView(state: ImportViewOptions, importIcon: string): string
                 name: 'import-media', attributes: { id: 'import-media' }, value: media, appearance: 'outlined', disabled: loading,
                 options: Object.entries(LIST_MEDIA_LABELS).map(([value, label]) => ({ value, label })),
             })}
-        ${renderShikimoriProfileField({ id: 'profile-input', value: profileInput, describedBy: 'import-note', disabled: loading })}
+        ${renderShikimoriProfileField({ id: 'profile-input', value: profileInput, describedBy: feedbackInProfile ? 'import-note import-feedback' : 'import-note', disabled: loading })}
         <div class="import-card-footer">
         <p id="import-note" class="muted small">Для открытого списка достаточно ника или ссылки.</p>
         ${renderButton({ label: loadLabel, variant: 'primary', type: 'submit', disabled: loading })}
         </div>
+        ${feedbackInProfile ? importFeedback(state.import) : ''}
         </form>` : `
         <form id="json-import-form" class="file-import" aria-label="Импорт JSON">
           <label for="json-input">JSON-выгрузка Shikimori</label>
@@ -94,9 +96,29 @@ export function importView(state: ImportViewOptions, importIcon: string): string
         </div>
       ` })}
     </div>
-    ${importFeedback(state.import)}
+    ${feedbackInProfile ? '' : importFeedback(state.import)}
     <div id="backup-feedback"></div>
   </section>`;
+}
+
+/** Показывает сообщение о ненайденном профиле и после закрытия возвращает фокус к нику. */
+export function showMissingProfileDialog(field: HTMLInputElement, message: string): void {
+    const document = field.ownerDocument;
+    const dialog = document.createElement('dialog');
+    dialog.className = 'profile-not-found-dialog';
+    dialog.setAttribute('aria-labelledby', 'profile-not-found-title');
+    dialog.setAttribute('aria-describedby', 'profile-not-found-message');
+    dialog.innerHTML = `
+      <h2 id="profile-not-found-title">Не удалось загрузить список</h2>
+      <p id="profile-not-found-message">${escapeHtml(message).replaceAll('\n', '<br>')}</p>
+      <footer>${renderButton({ label: 'Закрыть', variant: 'secondary' })}</footer>`;
+    dialog.querySelector('button')!.addEventListener('click', () => dialog.close());
+    dialog.addEventListener('close', () => {
+        dialog.remove();
+        field.focus({ preventScroll: true });
+    }, { once: true });
+    document.body.append(dialog);
+    dialog.showModal();
 }
 
 /** Показывает загрузку списка на этапе набора до появления готовой коллекции. */
